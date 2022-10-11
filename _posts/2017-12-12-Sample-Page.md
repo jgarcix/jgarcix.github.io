@@ -3,7 +3,7 @@ title: Sample Page
 published: true
 ---
 
-Text can be **bold**, _italic_, ~~strikethrough~~ or `keyword`.
+Text can be **bold**, _italic_, ~~strikethrough~~ or `keyword`. Esto es una prueba
 
 [Link to another page](another-page).
 
