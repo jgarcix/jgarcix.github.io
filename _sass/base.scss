@@ -17,8 +17,10 @@ body {
   background: $body-background url("../assets/bkg.png") 0 0;
   color: $body-foreground;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.8;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  text-align: justify;
+  text-indent: 15px;
 }
 
 /* General & 'Reset' Stuff */
