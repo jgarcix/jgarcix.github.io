@@ -131,7 +131,7 @@ Seguimos investigando mediante comandos de navegacion. Con pwd vemos donde nos e
 
 # []($header-1)Escalada de privilegios
 
-Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">gtfobins</a> para poder buscar la reverse shell con perl. 
+Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">GTFOBins</a> para poder buscar la reverse shell con perl. 
 
 Desde la máquina atacante nos ponemos en escucha por el puerto 444 con nc:
 

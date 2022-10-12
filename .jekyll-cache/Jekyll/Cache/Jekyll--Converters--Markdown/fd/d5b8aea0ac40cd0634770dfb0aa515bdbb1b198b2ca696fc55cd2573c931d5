@@ -126,7 +126,7 @@ by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; 
 
 <h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
 
-<p>Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">gtfobins</a> para poder buscar la reverse shell con perl.</p>
+<p>Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">GTFOBins</a> para poder buscar la reverse shell con perl.</p>
 
 <p>Desde la máquina atacante nos ponemos en escucha por el puerto 444 con nc:</p>
 

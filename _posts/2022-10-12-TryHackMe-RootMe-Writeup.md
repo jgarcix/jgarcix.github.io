@@ -66,7 +66,7 @@ Nmap done: 1 IP address (1 host up) scanned in 11.88 seconds
 
 El escaneo nos reporta dos puertos abiertos, el 22 y el 80, así como el servicio que corre en cada uno de ellos.
 
-Conseguimos así la primera pregunta, 2 puertos abiertos
+Conseguimos así la primera pregunta, 2 puertos abiertos.
 
 Como nos piden la version de Apache podemos hacer whatweb para ver lo que nos reporta: 
 
@@ -162,7 +162,7 @@ Nos metemos en el directorio oculto desde el navegador y parece que podemos subi
 
 Primero comprobaremos que se pueden subir imagenes correctamente. Para ello, tras subirla en /p???? nos dirigimos al directorio /uploads que hemos reconocido en el paso anterior con gobuster.
 
-La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a>
+La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a>.
 
 Una vez descargada modificamos el archivo .php, tanto el puerto, por ejemplo el 4444 como el valor $ip. **¡Debe ser tu IP!**
 
@@ -185,9 +185,9 @@ Desde la máquina atcante nos ponemos en escucha por el puerto 4444 con nc:
 listening on [any] 4444 ...
 ```
 
-Agregamos nuestra reverse shell con extension .php5 (porque con php no nos deja) y le damos a upload.
+Agregamos nuestra reverse shell con extensión .php5 (porque con php no nos deja) y le damos a upload.
 
-Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encunetra el archivo .php5
+Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encuentra el archivo .php5
 
 Lo ejecutamos estando en escucha y...
 
@@ -203,12 +203,12 @@ uid=33(www-data) gid=33(www-data) groups=33(www-data)
 $ 
 ```
 
-Conseguimos acceso a la máquina víctima
+Conseguimos acceso a la máquina víctima.
 
 
-# []($header-1)Enumareación interna y escalada de privilegios
+# []($header-1)Enumeración interna y escalada de privilegios
 
-Buscamos un archivo en el sistema que se llame user.txt y lo abrimos
+Buscamos un archivo en el sistema que se llame user.txt y lo abrimos.
 
 ```bash
 $ find / -type f -name user.txt 2>/dev/null

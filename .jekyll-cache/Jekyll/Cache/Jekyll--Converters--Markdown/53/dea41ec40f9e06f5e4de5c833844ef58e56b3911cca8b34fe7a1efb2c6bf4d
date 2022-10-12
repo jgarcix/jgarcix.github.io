@@ -1,4 +1,4 @@
-I"�C<p>La máquina RootMe, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean:</p>
+I"�C<p>La máquina RootMe, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean:</p>
 
 <ul>
   <li>¿Cuántos puertos están abiertos?<br />
@@ -68,7 +68,7 @@ Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up
 
 <p>El escaneo nos reporta dos puertos abiertos, el 22 y el 80, así como el servicio que corre en cada uno de ellos.</p>
 
-<p>Conseguimos así la primera pregunta, 2 puertos abiertos</p>
+<p>Conseguimos así la primera pregunta, 2 puertos abiertos.</p>
 
 <p>Como nos piden la version de Apache podemos hacer whatweb para ver lo que nos reporta:</p>
 
@@ -161,7 +161,7 @@ by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; 
 
 <p>Primero comprobaremos que se pueden subir imagenes correctamente. Para ello, tras subirla en /p???? nos dirigimos al directorio /uploads que hemos reconocido en el paso anterior con gobuster.</p>
 
-<p>La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a></p>
+<p>La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a>.</p>
 
 <p>Una vez descargada modificamos el archivo .php, tanto el puerto, por ejemplo el 4444 como el valor $ip. <strong>¡Debe ser tu IP!</strong></p>
 
@@ -182,9 +182,9 @@ by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; 
 listening on <span class="o">[</span>any] 4444 ...
 </code></pre></div></div>
 
-<p>Agregamos nuestra reverse shell con extension .php5 (porque con php no nos deja) y le damos a upload.</p>
+<p>Agregamos nuestra reverse shell con extensión .php5 (porque con php no nos deja) y le damos a upload.</p>
 
-<p>Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encunetra el archivo .php5</p>
+<p>Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encuentra el archivo .php5</p>
 
 <p>Lo ejecutamos estando en escucha y…</p>
 
@@ -199,11 +199,11 @@ USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
 $ 
 </span></code></pre></div></div>
 
-<p>Conseguimos acceso a la máquina víctima</p>
+<p>Conseguimos acceso a la máquina víctima.</p>
 
-<h1 id="enumareación-interna-y-escalada-de-privilegios"><a href="$header-1"></a>Enumareación interna y escalada de privilegios</h1>
+<h1 id="enumeración-interna-y-escalada-de-privilegios"><a href="$header-1"></a>Enumeración interna y escalada de privilegios</h1>
 
-<p>Buscamos un archivo en el sistema que se llame user.txt y lo abrimos</p>
+<p>Buscamos un archivo en el sistema que se llame user.txt y lo abrimos.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>find / <span class="nt">-type</span> f <span class="nt">-name</span> user.txt 2&gt;/dev/null
 /var/www/user.txt
@@ -225,7 +225,7 @@ THM<span class="o">{</span>???_???_?_?????<span class="o">}</span>
 <span class="c"># whoami</span>
 root
 <span class="c"># cat /root/root.txt</span>
-THM<span class="o">{</span>REDACTED<span class="o">}</span>
+THM<span class="o">{</span>????????<span class="o">}</span>
 </code></pre></div></div>
 
 <p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
