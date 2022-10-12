@@ -1,20 +1,4 @@
-I"�4<p>La máquina RootMe, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean:</p>
-
-<ul>
-  <li>¿Cuántos puertos están abiertos?<br />
-  *</li>
-  <li>¿Qué versión de Apache está corriendo?<br />
-  2.*.**</li>
-  <li>¿Qué servicio corre en el puerto 22?<br />
-  S**</li>
-  <li>Mediante alguna herramienrta de numeración encuentra directorios. ¿Cuál es el directorio oculto?<br />
-  /p____/</li>
-  <li>user.txt <br />
-  THM{y<strong><em>***</em><em>_</em></strong>*l}</li>
-  <li>Busca archivos que tengan permisos SUID. De ellos, ¿cuál es el archivo raro?<br />                 /u<strong>/</strong>*/—–</li>
-  <li>Encuentra una forma de escalar privilegios para encontrar root.txt <br />
-  THM{p<strong>**</strong><strong>_</strong><strong>**</strong>*n}</li>
-</ul>
+I"�2<p>La máquina Pickle Rick, ambientada en Rick y Morty es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos los tres ingredientes (flags) que nos hacen falta para la resolución de la misma.</p>
 
 <h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
 
