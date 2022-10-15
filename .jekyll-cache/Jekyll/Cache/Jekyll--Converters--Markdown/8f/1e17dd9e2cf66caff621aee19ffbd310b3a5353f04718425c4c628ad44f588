@@ -1,4 +1,4 @@
-I"�9<p>La máquina Brookling99 es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
+I"�9<p>La máquina Brookling99 es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
 
 <h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
 
@@ -159,7 +159,7 @@ Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span cl
 
 <h1 id="acceso-al-sistema"><a href="$header-1"></a>Acceso al sistema</h1>
 
-<p>La conseguimos e intentamos conectarnos mediante SSH con el usuario y la contraseña:</p>
+<p>La conseguimos e intentamos conectarnos mediante SSH con el usuario y la contraseña</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh jake@10.10.209.206
 The authenticity of host <span class="s1">'10.10.209.206 (10.10.209.206)'</span> can<span class="s1">'t be established.
@@ -197,13 +197,14 @@ User jake may run the following commands on brookly_nine_nine:
 
 <h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
 
-<p>Podemos usar el comando less como root: Nos dirigimos a <a href="gtfobins.github.io">GTFOBins</a> y buscamos el binario less y lo que podemos hacer siendo sudo.</p>
+<p>Podemos usar el comando less como root: Nos dirigimos a <a href="http://gtfobins.github.io">GTFOBins</a> y buscamos el binario less y lo que podemos hacer siendo sudo.</p>
 
 <p>Nos reporta esta información:</p>
 
 <blockquote>
-  <p>sudo less /etc/profile
-!/bin/sh</p>
+  <p>sudo less /etc/profile</p>
+
+  <p>!/bin/sh</p>
 </blockquote>
 
 <p>Ejecutamos entonces el comando (sudo less /etc/profile) e introducimos !/bin/sh</p>

