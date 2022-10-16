@@ -1,5 +1,5 @@
 ---
-title: TryHackMe Lazy Admin nWriteup
+title: TryHackMe Lazy Admin Writeup
 published: true
 ---
 
