@@ -19,17 +19,17 @@ La máquina Vulnversity, es una máquina de TryHackMe en la que mediante el segu
     ****
 * ¿Cuál es el directorio que tiene una página de upload?<br>
     /*******/
-* ¿Qué tipo de archivo (extensión) está bloqueado?
+* ¿Qué tipo de archivo (extensión) está bloqueado?<br>
     ****
-* ¿Qué tipo de archivo (extensión) está permitido?
+* ¿Qué tipo de archivo (extensión) está permitido?<br>
     *****
-* ¿Cuál es el nombre del usuario que maneja el servidor web?ç
+* ¿Cuál es el nombre del usuario que maneja el servidor web?<br>
     ****
-* ¿User flag?
+* ¿User flag?<br>
     ????????????????????????
-* ¿Qué archivo con permiso SUID no és normal?
+* ¿Qué archivo con permiso SUID no és normal?<br>
     /***/*********
-* ¿Root flag?
+* ¿Root flag?<br>
     ????????????????????????
 
 
