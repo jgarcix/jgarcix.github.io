@@ -129,9 +129,9 @@ En el escaneo anterior veo que la versión de nginx es 1.23.1. Busco exploits pe
 
 Tras varios intentos de bypassear el panel de login lo consigo con:
 
-> admin'||'1==1
+> "admin'||'1==1"
 
-Estamos dentro. Podemos buscar por usuarios por lo que en el recuadro de búsqueda vuelvo a introducir admin'||'1==1 y me reporta dos usuarios con sus contraseñas (hash)
+Estamos dentro. Podemos buscar por usuarios por lo que en el recuadro de búsqueda vuelvo a introducir "admin'||'1==1" y me reporta dos usuarios con sus contraseñas (hash)
 
 En este punto descifro la contraseña del usuario.
 
@@ -219,6 +219,8 @@ H�=���.�DH�=I/H�B/H9�tH�n.H��t  �����H�=/H�5
  ���H�]���UH��H���}��u��}�u2�}���u)H�=�.�����H�u,H�5�.H��+H���/������UH�����������]��AWL�=W)AVI��AUI��ATA��UH�-P)SL)�H������H��t�L��L��D��A��H��H9�u�H�[]A\A]A^A_��H�H��Welcome to Josh password manager!Please enter your master password: SampleAccess granted! Here is creds !cat /home/deploy/creds.txtAccess denied! This incident will be reported !@����0����@���h%����
 ```
 
+# [](#header-1)Acceso al sistema
+
 Lo ejecuto como root con la contraseña y nos da unas credenciales:
 
 ```bash
@@ -232,6 +234,8 @@ password: Deploying@pp!
 ```
 
 Intento conectarme mediante SSH con el usuario deploy y la contraseña que nos da y funciona.
+
+# [](#header-1)Escalada de privilegios
 
 Entro al sistema como usuario deploy. Tras hacer id veo que estoy en el grupo docker:
 
