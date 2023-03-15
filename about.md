@@ -8,4 +8,4 @@ Soy Jorge García, estudiante de Criminología y Ciencias de la Seguridad. Desde
 En el futuro me gustaría evolucionar en mi formación mediante el máster en 
 Ciberseguridad y Hacking Ético y las certificaciones eJPTv2, eCPPTv2, eWPTv2, OSWE y OSCP.
 
-Es por ello que he creado este espacio enfocado en Writeups de máquinas de TryHackMe y HackTheBox, así como distintas entradas en las que explicaré contenidos específicos del ámbito de la Ciberseguridad.
+Es por ello que he creado este espacio enfocado en Writeups de máquinas de TryHackMe, HackTheBox y VulnHub, así como distintas entradas en las que explicaré contenidos específicos del ámbito de la Ciberseguridad.
