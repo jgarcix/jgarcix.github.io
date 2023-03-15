@@ -16,7 +16,7 @@ not a tty
 root@overpass-prod:~#
 ```
 
-# [] (#header-1)Desarrollo 
+# [](#header-1)Desarrollo 
 
 Primero deberemos estbalecer una tty por defecto mediante:
 
@@ -58,7 +58,7 @@ Para establecer las proporciones adecuadas primero deberemos saber cuantas filas
 
 Y ya estaría!
 
-# [] (#header-1)Conclusión
+# [](#header-1)Conclusión
 
 A modo de resumen los comandos que habría que ejecutar serían los siguientes:
 
