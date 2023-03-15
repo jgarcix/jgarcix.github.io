@@ -63,10 +63,15 @@ Y ya estaría!
 A modo de resumen los comandos que habría que ejecutar serían los siguientes:
 
 > script /dev/null -c bash
+
 > Ctrl+Z
+
 > stty raw echo; fg
+
 > reset xterm
+
 > export TERM=xterm
+
 > stty rows 44 columns 140
 
 Espero que te haya gustado!
