@@ -166,7 +166,7 @@ whoami
 ruby
 ```
 
-Realizamos el <a href="https://jgarcix.github.io/Tratamiento-de-la-tty"> tratamiento de la TTY.</a> como siempre para poder hacerla interactiva.
+Realizamos el <a href="https://jgarcix.github.io/Tratamiento-de-la-tty"> tratamiento de la TTY</a> como siempre para poder hacerla interactiva.
 
 # [](#header-1)Escalada de privilegios
 
