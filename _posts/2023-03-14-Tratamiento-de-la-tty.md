@@ -66,7 +66,7 @@ A modo de resumen los comandos que habría que ejecutar serían los siguientes:
 
 > Ctrl+Z
 
-> stty raw echo; fg
+> stty raw -echo; fg
 
 > reset xterm
 
